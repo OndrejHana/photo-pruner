@@ -41,7 +41,7 @@ function Workspace() {
       if (command) execute(command);
     }} />
     <View style={styles.header}>
-      <View style={styles.grow}><Text style={styles.eyebrow}>PHOTO PRUNER</Text><Text testID="folder-title" style={styles.title}>{folder?.name ?? 'Your next keeper.'}</Text></View>
+      <View style={styles.grow}><Text style={styles.eyebrow}>PHOTO PRUNER</Text><Text numberOfLines={1} testID="folder-title" style={styles.title}>{folder?.name ?? 'Your next keeper.'}</Text></View>
       {busy && <ActivityIndicator color="#b8edab" />}
       <Button id="sample-folder" label="Sample shoot" disabled={busy} onPress={() => void load(() => Native.createDemoFolder())} />
       <Button id="open-folder" label="Open folder" disabled={busy} onPress={() => void load(() => Native.openFolder())} />
@@ -50,7 +50,7 @@ function Workspace() {
     </View>
     {(error || saveStatus.state === 'failed') && <View style={styles.errorBanner}><Text testID="app-error" style={styles.errorText}>{error ?? `Could not save review: ${saveStatus.state === 'failed' ? errorMessage(saveStatus.error) : ''}`}</Text>{error && <Button id="dismiss-error" label="Dismiss" onPress={() => setError(null)} />}{saveStatus.state === 'failed' && <Button id="retry-save" label="Retry save" disabled={busy} onPress={() => void retrySave()} />}</View>}
     {exportPlan && <View testID="export-confirmation" style={styles.exportPanel}>
-      <Text style={styles.selectedName}>Copy {exportPlan.names.length} RAW files into a new folder</Text>
+      <Text style={styles.selectedName}>Copy {exportPlan.names.length} RAW {exportPlan.names.length === 1 ? 'file' : 'files'} into a new folder</Text>
       <Text style={styles.muted}>{exportPlan.unreviewed} unreviewed items and {exportPlan.keptWithoutRaw} kept items without RAW files will be skipped. JPEG companions stay here.</Text>
       <Text style={styles.muted}>Star ratings stay in this app. Choose where to create the keepers folder.</Text>
       <View style={styles.controls}><Button id="export-cancel-confirmation" label="Cancel" onPress={dismissExport} /><Button id="export-choose-destination" label="Choose destination" active onPress={() => void confirmExport()} /></View>
@@ -60,7 +60,7 @@ function Workspace() {
       {progress && <Text style={styles.muted}>{Math.round(progress.bytes / 1024 / 1024)} / {Math.round(progress.totalBytes / 1024 / 1024)} MB · A complete folder appears after verification.</Text>}
       <Button id="cancel-export" label="Cancel export" onPress={() => void cancelExport()} />
     </View>}
-    {exportResult && <View style={styles.exportPanel}><Text testID="export-result" style={styles.selectedName}>Copied {exportResult.count} RAW files to {exportResult.name}</Text><Text style={styles.muted}>All copies verified. Originals unchanged. Star ratings remain in this app.</Text></View>}
+    {exportResult && <View style={styles.exportPanel}><Text testID="export-result" style={styles.selectedName}>Copied {exportResult.count} RAW {exportResult.count === 1 ? 'file' : 'files'} to {exportResult.name}</Text><Text style={styles.muted}>All copies verified. Originals unchanged. Star ratings remain in this app.</Text></View>}
     {!folder ? <View style={styles.empty}>
       <Text style={styles.hero}>Less sorting. More seeing.</Text>
       <Text style={styles.description}>Open a folder from Files, or try the sample shoot.{ '\n' }RAW + JPEG companions appear as one photo.</Text>
@@ -82,11 +82,11 @@ function Workspace() {
       </View>
       <View style={styles.main}>
         {selected ? <>
-          <View style={styles.photoHeader}><Text testID="selected-name" style={styles.selectedName}>{selected.name}</Text><Text testID="position" style={styles.muted}>{review.index + 1} / {photos.length} · {selected.kind}</Text></View>
+          <View style={styles.photoHeader}><Text numberOfLines={1} testID="selected-name" style={styles.selectedName}>{selected.name}</Text><Text testID="position" style={styles.muted}>{review.index + 1} / {photos.length} · {selected.kind}</Text></View>
           <PreviewFrame>
             {preview ? <Image testID="photo-preview" accessibilityLabel={`Preview of ${selected.name}`} source={preview} style={styles.image} contentFit="contain" cachePolicy="memory" recyclingKey={`${folder.revision}/${selected.id}`} transition={0} /> : previewError ? <View style={styles.previewMessage}><Text style={styles.selectedName}>Preview unavailable</Text><Text testID="preview-error" style={styles.description}>{previewError}</Text><Text style={styles.muted}>You can still rate and review this item.</Text></View> : <ActivityIndicator size="large" color="#b8edab" />}
           </PreviewFrame>
-          <View style={styles.photoFooter}><Text numberOfLines={2} testID="paired-files" style={styles.muted}>{selected.files.map(file => file.name).join(' + ')}</Text><Text testID="decision" style={[styles.decision, rating.decision === 'keep' && styles.green, rating.decision === 'reject' && styles.red]}>{rating.decision === 'unreviewed' ? 'Unreviewed' : rating.decision === 'keep' ? 'Keep' : 'Reject'}</Text></View>
+          <View style={styles.photoFooter}><Text numberOfLines={2} testID="paired-files" style={[styles.muted, styles.grow]}>{selected.files.map(file => file.name).join(' + ')}</Text><Text testID="decision" style={[styles.decision, rating.decision === 'keep' && styles.green, rating.decision === 'reject' && styles.red]}>{rating.decision === 'unreviewed' ? 'Unreviewed' : rating.decision === 'keep' ? 'Keep' : 'Reject'}</Text></View>
           <View style={styles.controls}>
             <Button id="previous" label="←" disabled={review.index === 0 || busy} onPress={() => execute({ type: 'move', delta: -1 })} />
             <Button id="reject" label="N  Reject" disabled={busy || !writable} onPress={() => execute({ type: 'decision', decision: 'reject' })} />
@@ -119,7 +119,7 @@ const styles = StyleSheet.create({
   row: { height: 84, paddingHorizontal: 18, paddingVertical: 11, gap: 5, borderLeftWidth: 3, borderColor: 'transparent' },
   selectedRow: { backgroundColor: '#273329', borderColor: '#b8edab' }, fileName: { color: '#edf2e8', fontSize: 15, fontWeight: '600' },
   main: { flex: 1, padding: 22, gap: 12 }, photoHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  selectedName: { color: '#f3f5ed', fontSize: 18, fontWeight: '600' }, canvas: { backgroundColor: '#070a08', justifyContent: 'center', alignItems: 'center', borderRadius: 12, overflow: 'hidden' },
+  selectedName: { flexShrink: 1, color: '#f3f5ed', fontSize: 18, fontWeight: '600' }, canvas: { backgroundColor: '#070a08', justifyContent: 'center', alignItems: 'center', borderRadius: 12, overflow: 'hidden' },
   previewSpace: { flex: 1, minHeight: 80, alignItems: 'center', justifyContent: 'center' },
   exportPanel: { padding: 16, gap: 10, backgroundColor: '#233027' },
   image: { width: '100%', height: '100%' }, previewMessage: { gap: 18, padding: 30, alignItems: 'center' },

@@ -1,1 +1,1 @@
-export const UI_REVISION = 'loop-4';
+export const UI_REVISION = 'keeper-v1';
