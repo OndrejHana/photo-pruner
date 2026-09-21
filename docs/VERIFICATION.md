@@ -7,13 +7,15 @@ The v1 implementation is in three stacked PRs. All are awaiting an external 5/5 
 - `npm run check`: ESLint, TypeScript, and 19 tests pass. Tests cover grouping, export selection and filename collisions, review validation/serialization, keyboard commands, 5,000-request preview/save bursts, stale results, save failures, and held-key undo preservation on the last photo.
 - macOS CI: six Swift tests pass. They cover byte-for-byte multi-file exports, unique destination folders, invalid/non-RAW selections, cancellation cleanup, changed sources, symlinks, preview fallback, and cache eviction.
 - Real CC0 Olympus E-P3 and E-M1 Mark II ORFs both produced 2400×1800 JPEG previews. Downloads are SHA-256 checked against [the fixture manifest](../tests/fixtures/orf-manifest.json). Preview images are CI artifacts, not repository files.
-- [Combined CI run](https://github.com/OndrejHana/photo-pruner/actions/runs/35665610875) passed both JavaScript and native jobs.
+- [Combined CI run](https://github.com/OndrejHana/photo-pruner/actions/runs/35667145350) passed both JavaScript and native jobs.
 - [EAS simulator build](https://expo.dev/accounts/ondrejhana/projects/photo-pruner/builds/9acb8391-c2b3-45d1-bebd-938578e731cd) finished and compiled the complete Swift/Expo bridge for iOS.
 - [EAS development build for the registered iPad](https://expo.dev/accounts/ondrejhana/projects/photo-pruner/builds/ae5bf7af-a0d3-4edc-8083-ddbb4d303fef) finished using the existing signing credentials.
 
+- [Standalone build for the registered iPad](https://expo.dev/accounts/ondrejhana/projects/photo-pruner/builds/198adbc2-137d-41f1-9fce-a89ba9d87043) finished from commit `5a25d1c`. Archive inspection confirmed a 1,503,868-byte bundled JavaScript file, the expected bundle identifier, and iPad support. It does not need Metro.
+
 ## Observed on iPadOS 26.0 in Appetize
 
-Used `ipadpro129inch5thgeneration`, Appetize build `b_4dhn2wfrivw64tfp3kot3ofe2e`. This is not the user's M5 hardware. Two short sessions were used and both ended; no additional sessions should be started without accounting for the remaining allowance.
+Used `ipadpro129inch5thgeneration`, Appetize build `b_4dhn2wfrivw64tfp3kot3ofe2e`. This is not the user's M5 hardware. Three short sessions were used (each limited to approximately three active minutes) and all ended; no additional sessions should be started without accounting for the remaining allowance.
 
 | Check | Observation / ignored local evidence |
 | --- | --- |
@@ -25,9 +27,9 @@ Used `ipadpro129inch5thgeneration`, Appetize build `b_4dhn2wfrivw64tfp3kot3ofe2e
 | Persistence | After keyboard review and Rescan, native storage restored Keep and five stars on DSC_0001. Assertions passed against `persisted-review-all.json`. |
 | Returning from system UI | The app accepted keyboard input after returning from Safari and reopening the sample. |
 
-The main recording is `evidence/keeper-v1-demo.mp4` (166.6 seconds). Screenshots, videos, downloaded photos, logs, session data, and signed build metadata are ignored by git. A later copy/label cleanup and filename truncation change passed static checks but was not given another paid simulator session.
+The main recording is `evidence/keeper-v1-demo.mp4` (166.6 seconds). Screenshots, videos, downloaded photos, logs, session data, and signed build metadata are ignored by git. The final session ran the updated label/truncation and held-key fix; the held-key edge case itself is covered by the regression test, not a simulator assertion.
 
-The bundled sample RAW files are intentionally invalid NEFs. Their export verifies the native Files/copy workflow, not ORF decoding. An attempt to download a real ORF through Safari did not successfully transfer the file into the selected folder within the session budget. Real ORF preview evidence is therefore **macOS CI only**, not iPadOS. No RAW files were embedded into the app solely for this check.
+The bundled sample RAW files are intentionally invalid NEFs. Their export verifies the native Files/copy workflow, not ORF decoding. Safari initially exposed an offscreen duplicate Download button. A later attempt targeted the visible button, downloaded the 11.9 MB E-P3 ORF, and opened it successfully in iPadOS system Quick Look (`final-download-list.png`, `orf-preview-system.png`). The file was not accessible through Photo Pruner's folder picker before the session ended. **Our app's real ORF rendering is verified in macOS CI; iPadOS system preview is separate evidence and does not establish an in-app ORF check.** No RAW files were embedded into the app solely for this check.
 
 ## Limits and remaining coverage
 
