@@ -97,6 +97,8 @@ export function applyCommand(state: ReviewState, command: Command, photos: Photo
   const previous = reviewFor(state.reviews, photo.id);
   const next = command.type === 'rate' ? { ...previous, stars: Math.max(0, Math.min(5, Math.round(command.stars))) } : { ...previous, decision: command.decision };
   if (command.type === 'rate' && next.stars === previous.stars) return state;
+  // A held key at the end of the folder must not erase useful undo history.
+  if (command.type === 'decision' && next.decision === previous.decision && state.index === photos.length - 1) return state;
   return { reviews: { ...state.reviews, [photo.id]: next },
     index: command.type === 'decision' ? Math.min(photos.length - 1, state.index + 1) : state.index,
     undo: [...state.undo.slice(-99), { id: photo.id, previous, selectedIndex: state.index }] };

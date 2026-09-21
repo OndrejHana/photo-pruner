@@ -4,7 +4,7 @@ The v1 implementation is in three stacked PRs. All are awaiting an external 5/5 
 
 ## Automated checks
 
-- `npm run check`: ESLint, TypeScript, and 18 tests pass. Tests cover grouping, export selection and filename collisions, review validation/serialization, keyboard commands, 5,000-request preview/save bursts, stale results, and save failures.
+- `npm run check`: ESLint, TypeScript, and 19 tests pass. Tests cover grouping, export selection and filename collisions, review validation/serialization, keyboard commands, 5,000-request preview/save bursts, stale results, save failures, and held-key undo preservation on the last photo.
 - macOS CI: six Swift tests pass. They cover byte-for-byte multi-file exports, unique destination folders, invalid/non-RAW selections, cancellation cleanup, changed sources, symlinks, preview fallback, and cache eviction.
 - Real CC0 Olympus E-P3 and E-M1 Mark II ORFs both produced 2400×1800 JPEG previews. Downloads are SHA-256 checked against [the fixture manifest](../tests/fixtures/orf-manifest.json). Preview images are CI artifacts, not repository files.
 - [Combined CI run](https://github.com/OndrejHana/photo-pruner/actions/runs/35665610875) passed both JavaScript and native jobs.

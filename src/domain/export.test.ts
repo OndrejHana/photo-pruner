@@ -45,3 +45,15 @@ test('boundary navigation and repeated ratings are no-ops; invalid ratings canno
   assert.throws(() => readReview('{"version":1,"reviews":[]}', photos));
   assert.throws(() => readReview('{"version":1,"reviews":{},"selectedID":3}', photos));
 });
+
+test('holding a decision key on the last photo preserves the original undo entry', () => {
+  const photos = groupPhotos([{ name: 'Last.ORF', size: 1 }]);
+  let state = readReview(null, photos);
+  state = applyCommand(state, { type: 'decision', decision: 'keep' }, photos);
+  const kept = state;
+  for (let index = 0; index < 5000; index++) state = applyCommand(state, { type: 'decision', decision: 'keep' }, photos);
+  assert.equal(state, kept);
+  assert.equal(state.undo.length, 1);
+  const undone = applyCommand(state, { type: 'undo' }, photos);
+  assert.equal(reviewFor(undone.reviews, photos[0].id).decision, 'unreviewed');
+});

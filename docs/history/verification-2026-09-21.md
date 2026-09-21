@@ -41,4 +41,4 @@ A full Metro reload was requested at the end, but the captured UI still containe
 
 The prototype reads direct folder children, stores app-local review metadata, and leaves original photos unchanged. It does not yet delete/move files, export XMP, recursively scan folders, or provide full-resolution zoom.
 
-All Appetize sessions created for this milestone were ended. Follow [DEVELOPMENT.md](DEVELOPMENT.md) to start a new session; do not rely on old tunnel URLs.
+All Appetize sessions created for this milestone were ended. Follow [DEVELOPMENT.md](../DEVELOPMENT.md) to start a new session; do not rely on old tunnel URLs.
