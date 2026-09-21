@@ -2,6 +2,8 @@
 
 An iPad photo-culling prototype built and tested from Linux using Expo/EAS and Appetize.
 
+The agreed v1 scope and remaining investigations live in the [RAW keeper workflow v1](https://github.com/OndrejHana/photo-pruner/issues/1) wayfinder map.
+
 - Open a folder through the native Files picker; reopen it using an iOS bookmark.
 - Group RAW + JPEG companions by filename stem, with JPEG previews preferred.
 - Browse using arrows, keep with Y, reject with N, rate with 1–5, clear stars with 0, undo with U.
