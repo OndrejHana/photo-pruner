@@ -4,7 +4,7 @@ import { Image } from 'expo-image';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import Native, { PhotoPrunerNativeView, type Folder } from './modules/photo-pruner-native';
-import { applyCommand, commandForKey, EMPTY_REVIEW, groupPhotos, readReview, serializeReview, type Command, type ReviewState } from './src/domain/library';
+import { applyCommand, commandForKey, EMPTY_REVIEW, groupPhotos, readReview, reviewFor, serializeReview, type Command, type ReviewState } from './src/domain/library';
 import { UI_REVISION } from './src/revision';
 
 function Button({ label, onPress, id, active = false, disabled = false }: { label: string; onPress: () => void; id: string; active?: boolean; disabled?: boolean }) {
@@ -28,7 +28,7 @@ function Workspace() {
   const photos = useMemo(() => groupPhotos(folder?.files ?? []), [folder]);
   const photosRef = useRef(photos);
   const selected = photos[review.index];
-  const rating = selected ? review.reviews[selected.id] ?? EMPTY_REVIEW : EMPTY_REVIEW;
+  const rating = selected ? reviewFor(review.reviews, selected.id) : EMPTY_REVIEW;
   const previewKey = `${folder?.id}:${folder?.scanMs}:${selected?.id}`;
   const preview = previewResult?.key === previewKey ? previewResult.uri : null;
   const previewError = previewResult?.key === previewKey ? previewResult.error : null;
@@ -118,7 +118,7 @@ function Workspace() {
   }, [review.index, photos.length]);
 
   const summary = photos.reduce((acc, photo) => {
-    const decision = review.reviews[photo.id]?.decision;
+    const decision = reviewFor(review.reviews, photo.id).decision;
     if (decision === 'keep') acc.keep++;
     if (decision === 'reject') acc.reject++;
     return acc;
@@ -151,7 +151,7 @@ function Workspace() {
         <FlatList ref={listRef} data={photos} extraData={review} keyExtractor={item => item.id}
           getItemLayout={(_, index) => ({ length: 84, offset: 84 * index, index })}
           renderItem={({ item, index }) => {
-            const meta = review.reviews[item.id] ?? EMPTY_REVIEW;
+            const meta = reviewFor(review.reviews, item.id);
             return <Pressable testID={`photo-${index}`} accessibilityRole="button" accessibilityLabel={`${item.name}, ${item.kind}, ${meta.decision}, ${meta.stars} stars`} onPress={() => select(index)} style={[styles.row, review.index === index && styles.selectedRow]}>
               <Text numberOfLines={1} style={styles.fileName}>{item.name}</Text>
               <Text style={styles.muted}>{item.kind} · {item.files.length} {item.files.length === 1 ? 'file' : 'files'}</Text>
