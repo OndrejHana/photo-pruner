@@ -11,8 +11,14 @@ class PhotoPrunerNativeView: ExpoView {
   override var canBecomeFirstResponder: Bool { enabled }
   override func didMoveToWindow() {
     super.didMoveToWindow()
+    NotificationCenter.default.removeObserver(self, name: UIApplication.didBecomeActiveNotification, object: nil)
+    if window != nil {
+      NotificationCenter.default.addObserver(self, selector: #selector(restoreFocus), name: UIApplication.didBecomeActiveNotification, object: nil)
+    }
     claimFocus()
   }
+  deinit { NotificationCenter.default.removeObserver(self) }
+  @objc private func restoreFocus() { claimFocus() }
   private func claimFocus() {
     DispatchQueue.main.async { [weak self] in
       guard let self = self, self.enabled, self.window != nil else { return }

@@ -12,3 +12,5 @@ evidence/
 *.ipa
 *.tar.gz
 .DS_Store
+.build/
+.swiftpm/
