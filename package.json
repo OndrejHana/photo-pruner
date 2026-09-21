@@ -4,19 +4,34 @@
   "main": "index.ts",
   "dependencies": {
     "expo": "~57.0.24",
+    "expo-dev-client": "~57.0.19",
+    "expo-file-system": "~57.0.7",
+    "expo-image": "~57.0.5",
     "expo-status-bar": "~57.0.1",
     "react": "19.2.3",
-    "react-native": "0.86.3"
+    "react-native": "0.86.3",
+    "react-native-safe-area-context": "~5.7.0"
   },
   "devDependencies": {
+    "@expo/ngrok": "^4.1.0",
+    "@types/node": "^26.6.2",
     "@types/react": "~19.2.2",
+    "cbor-x": "^1.6.0",
+    "eslint": "^9.0.0",
+    "eslint-config-expo": "~57.0.2",
     "typescript": "~6.0.3"
   },
   "scripts": {
-    "start": "expo start",
+    "start": "expo start --dev-client",
     "android": "expo start --android",
     "ios": "expo start --ios",
-    "web": "expo start --web"
+    "web": "expo start --web",
+    "test": "node --test src/domain/*.test.ts",
+    "typecheck": "tsc --noEmit",
+    "check": "npm run lint && npm run typecheck && npm test",
+    "build:sim": "eas build --platform ios --profile development-simulator",
+    "start:tunnel": "expo start --dev-client --tunnel",
+    "lint": "eslint App.tsx src modules --max-warnings 0"
   },
   "private": true
 }
