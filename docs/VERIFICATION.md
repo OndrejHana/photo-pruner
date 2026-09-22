@@ -1,11 +1,11 @@
 # Verification — 22 September 2026
 
-The v1 implementation is in three stacked PRs. All are awaiting an external 5/5 review; none has been merged. GitHub's Codex reviewer reported its usage limit was exhausted. The [wayfinder map](https://github.com/OndrejHana/photo-pruner/issues/1) tracks the merge gate and remaining device coverage.
+The v1 implementation is in three stacked PRs. External reviews have resumed: the domain-model PR received 5/5 and merged. The native review found a case-sensitive filename edge case; preview lookup now permits RAW name collisions while export still rejects them. Updated native and UI revisions require fresh 5/5 reviews before merging. The [wayfinder map](https://github.com/OndrejHana/photo-pruner/issues/1) tracks the merge gate and remaining device coverage.
 
 ## Automated checks
 
 - `npm run check`: ESLint, TypeScript, and 19 tests pass. Tests cover grouping, export selection and filename collisions, review validation/serialization, keyboard commands, 5,000-request preview/save bursts, stale results, save failures, and held-key undo preservation on the last photo.
-- macOS CI: six Swift tests pass. They cover byte-for-byte multi-file exports, unique destination folders, invalid/non-RAW selections, cancellation cleanup, changed sources, symlinks, preview fallback, and cache eviction.
+- macOS CI previously passed six Swift tests; a seventh regression now checks JPEG preview with conflicting RAW filenames and continued export rejection. They cover byte-for-byte multi-file exports, unique destination folders, invalid/non-RAW selections, cancellation cleanup, changed sources, symlinks, preview fallback, and cache eviction.
 - Real CC0 Olympus E-P3 and E-M1 Mark II ORFs both produced 2400×1800 JPEG previews. Downloads are SHA-256 checked against [the fixture manifest](../tests/fixtures/orf-manifest.json). Preview images are CI artifacts, not repository files.
 - [Combined CI run](https://github.com/OndrejHana/photo-pruner/actions/runs/35667145350) passed both JavaScript and native jobs.
 - [EAS simulator build](https://expo.dev/accounts/ondrejhana/projects/photo-pruner/builds/9acb8391-c2b3-45d1-bebd-938578e731cd) finished and compiled the complete Swift/Expo bridge for iOS.
