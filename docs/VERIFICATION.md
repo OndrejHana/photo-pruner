@@ -1,44 +1,42 @@
-# Verification — 21 September 2026
+# Verification — 22 September 2026
 
-The Linux → EAS → Appetize development loop works with a native Expo development client. This is a functional prototype and a verification setup, not a completed photo-management product.
+The v1 implementation is in three stacked PRs. External reviews have resumed: the domain-model PR received 5/5 and merged. The native review found a case-sensitive filename edge case; preview lookup now permits RAW name collisions while export still rejects them. Updated native and UI revisions require fresh 5/5 reviews before merging. The [wayfinder map](https://github.com/OndrejHana/photo-pruner/issues/1) tracks the merge gate and remaining device coverage.
 
-## Build and local checks
+## Automated checks
 
-- EAS account: `ondrejhana`.
-- Simulator build: [fd55b836-55a9-499b-b4b1-577f7488b946](https://expo.dev/accounts/ondrejhana/projects/photo-pruner/builds/fd55b836-55a9-499b-b4b1-577f7488b946), FINISHED. The Swift module compiled in this build.
-- Appetize build: `b_sk3ylstcclrmqh4eqvd5upgtpe`.
-- Test device: Appetize `ipadpro129inch5thgeneration`, iPadOS 26.0, landscape. This is not the user's M5 hardware.
-- `npm run check`: ESLint, TypeScript, and all eight domain tests passed.
-- Expo Doctor: 21/21 checks passed during setup.
-- An iOS bundle export and native-module autolinking check passed before the final error-message cleanup and revision-marker changes; the updated JavaScript subsequently ran in Appetize.
-- Shell/Node syntax checks and `git diff --check` passed.
+- `npm run check`: ESLint, TypeScript, and 19 tests pass. Tests cover grouping, export selection and filename collisions, review validation/serialization, keyboard commands, 5,000-request preview/save bursts, stale results, save failures, and held-key undo preservation on the last photo.
+- macOS CI previously passed six Swift tests; a seventh regression now checks JPEG preview with conflicting RAW filenames and continued export rejection. They cover byte-for-byte multi-file exports, unique destination folders, invalid/non-RAW selections, cancellation cleanup, changed sources, symlinks, preview fallback, and cache eviction.
+- Real CC0 Olympus E-P3 and E-M1 Mark II ORFs both produced 2400×1800 JPEG previews. Downloads are SHA-256 checked against [the fixture manifest](../tests/fixtures/orf-manifest.json). Preview images are CI artifacts, not repository files.
+- [Combined CI run](https://github.com/OndrejHana/photo-pruner/actions/runs/35667145350) passed both JavaScript and native jobs.
+- [EAS simulator build](https://expo.dev/accounts/ondrejhana/projects/photo-pruner/builds/9acb8391-c2b3-45d1-bebd-938578e731cd) finished and compiled the complete Swift/Expo bridge for iOS.
+- [EAS development build for the registered iPad](https://expo.dev/accounts/ondrejhana/projects/photo-pruner/builds/ae5bf7af-a0d3-4edc-8083-ddbb4d303fef) finished using the existing signing credentials.
 
-## Observed on the simulator
+- [Standalone build for the registered iPad](https://expo.dev/accounts/ondrejhana/projects/photo-pruner/builds/198adbc2-137d-41f1-9fce-a89ba9d87043) finished from commit `5a25d1c`. Archive inspection confirmed a 1,503,868-byte bundled JavaScript file, the expected bundle identifier, and iPad support. It does not need Metro.
 
-| Check | Result and evidence under `evidence/` |
+## Observed on iPadOS 26.0 in Appetize
+
+Used `ipadpro129inch5thgeneration`, Appetize build `b_4dhn2wfrivw64tfp3kot3ofe2e`. This is not the user's M5 hardware. Three short sessions were used (each limited to approximately three active minutes) and all ended; no additional sessions should be started without accounting for the remaining allowance.
+
+| Check | Observation / ignored local evidence |
 | --- | --- |
-| RAW + JPEG pairing | Six fixture files became four items. Paired items list both filenames and show the JPEG. `24-pair-rating.png` |
-| Keyboard input | Actual viewer keyboard events delivered Y, N, U, arrows, and digits. Five stars + Y + Left produced a kept pair with five stars. `21-keyboard.json`; N + U left item 3 unreviewed, then 3 assigned three stars in `36-before-reload.json` |
-| Touch review controls | Keep/reject advanced, stars stayed, undo restored the prior selection and decision. Fresh-session assertions passed in `scripts/verify-ui.mjs`. `22-reviewed.png`, `23-undo.png`, `24-pair-rating.png` |
-| Saved reviews | Rescan reloaded the review from native storage with one kept, one rejected, and five stars on the first pair. `25-rescan.png`. Selecting Sample shoot through Files retained the review: `35-picked.png`, `36-before-reload.json` |
-| Native Files picker | Opened the native folder picker, displayed sample contents, selected the folder, and returned to the app. `33-picker.png`, `35-picked.png`. An empty folder was also accepted and showed an empty state during an earlier session. |
-| Unreadable RAW | An intentionally invalid RAW-only fixture showed a useful error and remained reviewable. `26-invalid-raw.png` |
-| Live source edits | Footer changed from loop-1 to loop-2, and later loop-3 to loop-4, in existing sessions without a native rebuild. `37-fast-refresh.png` |
+| Hardware key events | 5, Y, N, U and arrows produced one kept pair with five stars and one rejected pair. Assertions passed against `evidence/keeper-keys.json`. |
+| 4:3 preview | Measured 833×624 points in landscape (pixel rounding) and 744×558 in portrait. Images were contained. `keeper-start.png`, `keeper-portrait.png`. |
+| Export confirmation | Reported one RAW file, two skipped unreviewed items, and in-app-only ratings. `export-confirm.png`. |
+| Native destination picker | Selected the app's Documents directory as the parent. `export-picker.png`. |
+| Completed export | Reported one verified copy in a new Keepers folder. Reopening Files showed that folder with one item beside the unchanged six-file sample source. `export-result.png`, `orf-open-folder.png`. |
+| Persistence | After keyboard review and Rescan, native storage restored Keep and five stars on DSC_0001. Assertions passed against `persisted-review-all.json`. |
+| Returning from system UI | The app accepted keyboard input after returning from Safari and reopening the sample. |
 
-The complete fresh-session touch sequence passed all five screenshot/assertion checkpoints. A development Tools overlay initially intercepted Rescan; the connection script now disables that overlay before testing.
+The main recording is `evidence/keeper-v1-demo.mp4` (166.6 seconds). Screenshots, videos, downloaded photos, logs, session data, and signed build metadata are ignored by git. The final session ran the updated label/truncation and held-key fix; the held-key edge case itself is covered by the regression test, not a simulator assertion.
 
-The last session was recorded in `evidence/final-demo.mp4` (95.5 seconds of recorded frames, about 3.3 MB). Screenshots, recordings, session logs, binaries, and signed download metadata are ignored by git.
+The bundled sample RAW files are intentionally invalid NEFs. Their export verifies the native Files/copy workflow, not ORF decoding. Safari initially exposed an offscreen duplicate Download button. A later attempt targeted the visible button, downloaded the 11.9 MB E-P3 ORF, and opened it successfully in iPadOS system Quick Look (`final-download-list.png`, `orf-preview-system.png`). The file was not accessible through Photo Pruner's folder picker before the session ended. **Our app's real ORF rendering is verified in macOS CI; iPadOS system preview is separate evidence and does not establish an in-app ORF check.** No RAW files were embedded into the app solely for this check.
 
-A full Metro reload was requested at the end, but the captured UI still contained the previous in-memory key diagnostic. That evidence does **not** establish a completed full reload or cold-launch restoration. Persistence is verified by native reloads of the review during rescanning and folder selection; cold launch, backgrounding, and revoked folder permissions remain to test.
+## Limits and remaining coverage
 
-## Remaining physical-device work
+- Validate the user's actual Olympus camera modes and keyboard on the physical M5 iPad. ImageIO support is camera/mode dependent; see [ORF research](research/orf-previews.md).
+- Cold process relaunch, revoked folder permissions, OS termination during export, and low-disk failures have not been manually exercised on iPadOS. Saved-review loading on rescan, cancellation cleanup, and source-change failures have automated or simulator evidence as described above.
+- Burst tests prove bounded asynchronous work; they are not measurements of real M5 image latency, memory pressure, or 5,000-file scanning performance.
+- Cloud storage, external drives, recursive scans, and zoom are outside v1 requirements.
+- Newly assigned ratings stay in the app. Exported files are byte-for-byte copies; no embedded rating writer or sidecars are included.
 
-- Interactive Apple authentication is required. EAS knows the Apple team and an enabled registered iPad, but no suitable internal-distribution credentials were available for this app. The interactive build reached the Apple ID prompt and was cancelled there; no device build was produced.
-- Test the actual iPad keyboard, sustained/repeated keys, focus after system UI, and shortcut behavior with iPadOS accessibility settings.
-- Test representative real camera RAW + JPEG pairs. The bundled NEFs are intentionally invalid and prove grouping/error behavior only. ImageIO decoding support for the user's camera is unverified.
-- Test iCloud Drive, external USB/SD storage, disconnected/reconnected volumes, and durable security-scoped access across cold launches.
-- Measure large folders, image latency, memory pressure, and zoom requirements on the M5. Simulator timings are diagnostics, not performance evidence.
-
-The prototype reads direct folder children, stores app-local review metadata, and leaves original photos unchanged. It does not yet delete/move files, export XMP, recursively scan folders, or provide full-resolution zoom.
-
-All Appetize sessions created for this milestone were ended. Follow [DEVELOPMENT.md](DEVELOPMENT.md) to start a new session; do not rely on old tunnel URLs.
+The [original prototype verification](history/verification-2026-09-21.md) is retained as historical evidence; its earlier signing block has since been resolved.

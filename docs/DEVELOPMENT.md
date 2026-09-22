@@ -76,18 +76,23 @@ Press `r` in the Metro terminal for a full JavaScript reload. To verify Fast Ref
 
 ## Physical iPad
 
-EAS knows the Apple team and the registered iPad. Creating a new app's internal-distribution credentials requires interactive setup; the non-interactive device-build attempt could not find suitable credentials.
+EAS now has signing credentials for this app and the registered iPad. Non-interactive device builds succeeded on 22 September 2026. Credentials stay on EAS; no Apple login is needed for routine builds while those credentials remain valid.
 
 ```sh
-eas build --platform ios --profile development-device
+eas build --platform ios --profile development-device --non-interactive
+# Standalone app with bundled JavaScript, without Metro:
+eas build --platform ios --profile preview-device --non-interactive
 ```
 
-Complete Apple authentication and signing setup, select the registered iPad, and install the resulting build using its EAS link. Enable Developer Mode on the iPad if needed. Connect it to the same Metro tunnel using the development client. Apple credentials are not required for simulator builds.
+Install the resulting build using its EAS link. Connect development builds to the Metro tunnel; standalone preview builds open directly. Signing setup may require Apple authentication when credentials expire or a new device is registered. Apple credentials are not required for simulator builds.
 
 ## What lives where
 
 - `src/domain/library.ts`: grouping, command behavior, undo, validated review serialization.
-- `App.tsx`: native UI and asynchronous preview/persistence orchestration.
-- `modules/photo-pruner-native`: folder picker, security-scoped bookmark, coordinated reads, ImageIO preview cache, atomic app-local review writes, hardware key commands.
+- `App.tsx`: review UI, export controls, and the 4:3 preview frame.
+- `src/useWorkspace.ts`: folder, review, preview, and export orchestration.
+- `src/domain/async-work.ts`: bounded preview work and coalesced autosaves.
+- `modules/photo-pruner-native`: folder picker, security-scoped bookmarks, revision-scoped scans, bounded ImageIO cache, verified RAW export, atomic review writes, and hardware keys.
+- `Package.swift` and `tests/native`: macOS CI builds the shared Swift core and exercises real ORF decoding and export integrity.
 - `src/revision.ts`: visible marker used to prove an actual source change reaches the simulator.
 - `artifacts/`: local build metadata and downloads; excluded from git/EAS uploads.

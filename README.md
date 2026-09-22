@@ -1,21 +1,24 @@
 # Photo Pruner
 
-An iPad photo-culling prototype built and tested from Linux using Expo/EAS and Appetize.
+Review a folder on your iPad and copy its RAW keepers into a new folder. Built with Expo/React Native and a local Swift module, developed from Linux with EAS and Appetize.
 
-The agreed v1 scope and remaining investigations live in the [RAW keeper workflow v1](https://github.com/OndrejHana/photo-pruner/issues/1) wayfinder map.
+- Open a folder in Files; RAW + JPEG companions appear as one item. RAW-only items are supported, with Olympus ORF as the v1 target.
+- Review with **Y** keep, **N** reject, arrows, **1–5** stars, **0** clear stars, and **U** undo. Keep/reject advances; stars stay on the current item.
+- See a contained preview in a **4:3** window, using JPEG companions first and ImageIO for RAW previews.
+- Autosave decisions on the iPad and restore them when reopening the source folder.
+- Export explicitly kept RAW files into a unique new folder under a destination chosen in Files. Verify every copy, support cancellation, and leave source files unchanged.
 
-- Open a folder through the native Files picker; reopen it using an iOS bookmark.
-- Group RAW + JPEG companions by filename stem, with JPEG previews preferred.
-- Browse using arrows, keep with Y, reject with N, rate with 1–5, clear stars with 0, undo with U.
-- Keep/reject advances; setting stars stays on the current photo.
-- Store decisions separately in the app's Application Support directory. Original files are never modified or deleted.
-- Generate scaled previews on a native worker queue and prefetch the next image.
+Stars remain in the app. Export preserves RAW bytes and their existing metadata; it does not add ratings or sidecars. Unreviewed items, JPEG companions, and kept items without RAW files are excluded from export. The app scans direct children of the chosen folder, without recursion.
 
-This is an iOS-only development build. Expo Go cannot run its local Swift module.
-The initial prototype scans direct children of a folder, not subfolders.
-It does not export XMP or perform file deletion/moves yet.
+See [workflow rules](docs/V1-WORKFLOW.md), the [wayfinder map](https://github.com/OndrejHana/photo-pruner/issues/1), and [verification evidence and limits](docs/VERIFICATION.md). PRs require an external **5/5** review of the current revision before merging.
 
-## Develop
+## Run on an iPad
+
+The `preview-device` EAS profile creates a standalone internal-distribution app with bundled JavaScript. Install it through its EAS build link; it does not require a development server. The device must be registered in the signing profile.
+
+For development, install the `development-device` build and connect it to the Metro URL printed by `scripts/start-dev.sh`. Expo Go cannot run the local Swift module. Native changes require reinstalling a compatible build; older clients show an update message.
+
+## Develop and test
 
 ```sh
 npm ci
@@ -23,8 +26,17 @@ npm run check
 ./scripts/start-dev.sh
 ```
 
-Read [the development workflow](docs/DEVELOPMENT.md) and [verification results](docs/VERIFICATION.md).
+On a Mac, or in the macOS CI job:
+
+```sh
+python3 scripts/download-orf-fixtures.py
+ORF_FIXTURES="$PWD/artifacts/fixtures" swift test
+```
+
+Read [the development workflow](docs/DEVELOPMENT.md) for builds and the Linux/Appetize loop. Fixture downloads, previews, screenshots, recordings, and build archives stay outside git.
 
 ## Samples
 
-The Sample shoot button creates three synthetic JPEG images and three deliberately invalid `.NEF` files in Documents/Sample shoot. They form four logical items: two pairs, one JPEG-only item, and one RAW-only item. This tests pairing, JPEG preview preference, and graceful preview errors. It does not establish support for any camera RAW decoder.
+The Sample shoot button creates three synthetic JPEG images and three deliberately invalid `.NEF` files in Documents/Sample shoot. They form four items: two pairs, one JPEG-only item, and one RAW-only item. These exercise grouping, keyboard controls, export mechanics, and preview errors; they are not real RAW photos.
+
+Native CI separately downloads SHA-256-verified CC0 Olympus E-P3 and E-M1 Mark II ORFs from [raw.pixls.us](https://raw.pixls.us/). Both produce 2400×1800 previews. Camera modes beyond these samples still need validation on the target iPad.
