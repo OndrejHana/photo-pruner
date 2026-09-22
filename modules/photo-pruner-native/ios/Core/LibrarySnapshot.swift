@@ -82,11 +82,13 @@ struct LibrarySnapshot {
   }
 
   func selected(_ names: [String], rawOnly: Bool = false) throws -> [ScannedFile] {
+    // Case-folded collisions matter when creating export destinations, not when
+    // looking up existing preview candidates on a case-sensitive source volume.
     var seen = Set<String>()
     return try names.map { name in
       let key = name.precomposedStringWithCanonicalMapping.lowercased()
       guard name != ".", name != "..", !name.contains("/"), !name.contains("\\"), !name.contains("\0"),
-            seen.insert(key).inserted, let file = files[name],
+            (!rawOnly || seen.insert(key).inserted), let file = files[name],
             !rawOnly || rawExtensions.contains(file.url.pathExtension.lowercased()) else {
         throw prunerError("Invalid or conflicting photo selection. Rescan the folder.")
       }

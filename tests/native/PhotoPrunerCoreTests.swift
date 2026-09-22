@@ -1,6 +1,8 @@
 import XCTest
 import Foundation
 import ImageIO
+import CoreGraphics
+import UniformTypeIdentifiers
 @testable import PhotoPrunerCore
 
 final class PhotoPrunerCoreTests: XCTestCase {
@@ -50,6 +52,38 @@ final class PhotoPrunerCoreTests: XCTestCase {
     for names in [[], ["One.JPG"], ["../One.ORF"], ["One.ORF", "One.ORF"], ["Missing.ORF"]] {
       XCTAssertThrowsError(try KeeperExporter.export(snapshot: snapshot, names: names, parent: output))
     }
+    XCTAssertTrue(try FileManager.default.contentsOfDirectory(atPath: output.path).isEmpty)
+  }
+
+  func testConflictingRawNamesDoNotBlockJpegPreviewButStillRejectExport() throws {
+    let jpeg = source.appendingPathComponent("DSC_0001.JPG")
+    let context = try XCTUnwrap(CGContext(data: nil, width: 1600, height: 1200,
+      bitsPerComponent: 8, bytesPerRow: 0, space: CGColorSpaceCreateDeviceRGB(),
+      bitmapInfo: CGImageAlphaInfo.noneSkipLast.rawValue))
+    context.setFillColor(CGColor(gray: 0.5, alpha: 1))
+    context.fill(CGRect(x: 0, y: 0, width: 1600, height: 1200))
+    let image = try XCTUnwrap(context.makeImage())
+    let destination = try XCTUnwrap(CGImageDestinationCreateWithURL(
+      jpeg as CFURL, UTType.jpeg.identifier as CFString, 1, nil))
+    CGImageDestinationAddImage(destination, image, nil)
+    XCTAssertTrue(CGImageDestinationFinalize(destination))
+    let raw = try fixture("DSC_0001.ORF", data: Data("invalid raw".utf8))
+    // Model a case-sensitive source snapshot even on case-insensitive CI volumes.
+    // The second RAW is never read: JPEG should win, and export should reject
+    // the destination collision before opening either RAW.
+    let snapshot = LibrarySnapshot(url: source, id: "case-sensitive-source", files: [
+      "DSC_0001.JPG": ScannedFile(url: jpeg, fingerprint: try FileFingerprint.at(jpeg)),
+      "DSC_0001.ORF": ScannedFile(url: raw, fingerprint: try FileFingerprint.at(raw)),
+      "dsc_0001.orf": ScannedFile(url: source.appendingPathComponent("dsc_0001.orf"),
+        fingerprint: try FileFingerprint.at(raw))
+    ], scanMs: 0)
+    let candidates = try snapshot.selected(["DSC_0001.JPG", "DSC_0001.ORF", "dsc_0001.orf"])
+    let uri = try PreviewCache(directory: root.appendingPathComponent("cache")).preview(candidates)
+    let previewURL = try XCTUnwrap(URL(string: uri))
+    let preview = try XCTUnwrap(CGImageSourceCreateWithURL(previewURL as CFURL, nil))
+    XCTAssertNotNil(CGImageSourceCreateImageAtIndex(preview, 0, nil))
+    XCTAssertThrowsError(try KeeperExporter.export(snapshot: snapshot,
+      names: ["DSC_0001.ORF", "dsc_0001.orf"], parent: output))
     XCTAssertTrue(try FileManager.default.contentsOfDirectory(atPath: output.path).isEmpty)
   }
 
