@@ -1,0 +1,18 @@
+[
+  {
+    "name": "E-P3.ORF",
+    "url": "https://raw.pixls.us/getfile.php/241/nice/Olympus - E-P3 - 16bit (4:3).ORF",
+    "sha256": "540edabdd9d4e6ef8602f56443730cc3133d714dc4d3d2c607e2f0aa6be5cbcd",
+    "license": "CC0-1.0",
+    "source": "https://raw.pixls.us/",
+    "camera": "E-P3"
+  },
+  {
+    "name": "E-M1MarkII.ORF",
+    "url": "https://raw.pixls.us/getfile.php/1993/nice/Olympus - E-M1MarkII - 16bit (4:3).ORF",
+    "sha256": "0b433019e5fa61548d7eb0eb7bb90894251542c056da72355202382696d0ceb8",
+    "license": "CC0-1.0",
+    "source": "https://raw.pixls.us/",
+    "camera": "E-M1MarkII"
+  }
+]

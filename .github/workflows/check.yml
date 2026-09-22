@@ -16,3 +16,16 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run check
+  native:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - run: python3 scripts/download-orf-fixtures.py
+      - run: swift test
+        env:
+          ORF_FIXTURES: ${{ github.workspace }}/artifacts/fixtures
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: orf-preview-evidence
+          path: artifacts/native-evidence/
