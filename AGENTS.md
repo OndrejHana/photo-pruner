@@ -1,4 +1,4 @@
-# Photo Pruner
+# Keeper
 
 An iPad photo-culling prototype. Work from this directory.
 

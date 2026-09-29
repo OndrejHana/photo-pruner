@@ -1,4 +1,4 @@
-# Photo Pruner
+# Keeper
 
 Review a folder on your iPad and copy its RAW keepers into a new folder. Built with Expo/React Native and a local Swift module, developed from Linux with EAS and Appetize.
 

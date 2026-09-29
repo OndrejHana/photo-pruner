@@ -43,4 +43,4 @@ while (Date.now() < deadline) {
 }
 if (!ready) throw new Error('App did not become ready. Inspect evidence/connect-status.json.');
 run('screenshot', 'evidence/connect-ready');
-console.log('Development client connected and Photo Pruner is ready.');
+console.log('Development client connected and Keeper is ready.');

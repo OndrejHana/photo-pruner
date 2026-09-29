@@ -181,7 +181,7 @@ public class PhotoPrunerNativeModule: Module {
         colors[number - 1].setFill()
         UIBezierPath(ovalIn: CGRect(x: CGFloat(250 + number * 70), y: 90, width: 750, height: 750)).fill()
         ("SAMPLE 0\(number)" as NSString).draw(at: CGPoint(x: 90, y: 850), withAttributes: [.font: UIFont.monospacedSystemFont(ofSize: 84, weight: .bold), .foregroundColor: UIColor.white])
-        ("Photo Pruner · preview fixture" as NSString).draw(at: CGPoint(x: 96, y: 970), withAttributes: [.font: UIFont.systemFont(ofSize: 30), .foregroundColor: UIColor.lightGray])
+        ("Keeper · preview fixture" as NSString).draw(at: CGPoint(x: 96, y: 970), withAttributes: [.font: UIFont.systemFont(ofSize: 30), .foregroundColor: UIColor.lightGray])
       }
       guard let data = image.jpegData(compressionQuality: 0.9) else { throw prunerError("Could not create sample images.") }
       try data.write(to: file, options: .atomic)

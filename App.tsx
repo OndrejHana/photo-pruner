@@ -41,7 +41,7 @@ function Workspace() {
       if (command) execute(command);
     }} />
     <View style={styles.header}>
-      <View style={styles.grow}><Text style={styles.eyebrow}>PHOTO PRUNER</Text><Text numberOfLines={1} testID="folder-title" style={styles.title}>{folder?.name ?? 'Your next keeper.'}</Text></View>
+      <View style={styles.grow}><Text style={styles.eyebrow}>KEEPER</Text><Text numberOfLines={1} testID="folder-title" style={styles.title}>{folder?.name ?? 'Your next keeper.'}</Text></View>
       {busy && <ActivityIndicator color="#b8edab" />}
       <Button id="sample-folder" label="Sample shoot" disabled={busy} onPress={() => void load(() => Native.createDemoFolder())} />
       <Button id="open-folder" label="Open folder" disabled={busy} onPress={() => void load(() => Native.openFolder())} />
@@ -103,7 +103,7 @@ function Workspace() {
   </SafeAreaView>;
 }
 export default function App() {
-  return <SafeAreaProvider>{Native.apiVersion >= 2 ? <Workspace /> : <SafeAreaView style={styles.screen}><View style={styles.empty}><Text style={styles.hero}>Update the development build</Text><Text style={styles.description}>RAW keeper export needs the new iPad build. Install the latest Photo Pruner build from EAS, then reconnect to this development server.</Text></View></SafeAreaView>}</SafeAreaProvider>;
+  return <SafeAreaProvider>{Native.apiVersion >= 2 ? <Workspace /> : <SafeAreaView style={styles.screen}><View style={styles.empty}><Text style={styles.hero}>Update the development build</Text><Text style={styles.description}>RAW keeper export needs the new iPad build. Install the latest Keeper build from EAS, then reconnect to this development server.</Text></View></SafeAreaView>}</SafeAreaProvider>;
 }
 
 const styles = StyleSheet.create({
