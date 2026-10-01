@@ -37,7 +37,7 @@ while (Date.now() < deadline) {
       run('tap', '--select-position', `${(b.x + b.width / 2) / window.width},${(b.y + b.height / 2) / window.height}`);
     }
     run('tap', '--select-text', 'Close', '--select-index', '0', '--timeout', '10000');
-  } else if (nodes.some(n => n.attributes?.identifier === 'sample-folder')) {
+  } else if (nodes.some(n => ['sample-folder', 'folder-menu'].includes(n.attributes?.identifier))) {
     ready = true;
     break;
   }

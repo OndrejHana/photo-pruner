@@ -15,7 +15,7 @@ Thumbnail browsing, filters, comparison, and batch actions remain later work. Th
 - `npm run check`: ESLint, TypeScript, and all 35 domain tests passed. New coverage includes gesture intent/thresholds, boundaries, stale or duplicate releases, interaction invalidation, clear-decision Undo, and exact keyboard mappings.
 - `npx expo-doctor`: 21/21 checks passed. Production iOS JavaScript export also succeeded.
 - [EAS development simulator build](https://expo.dev/accounts/ondrejhana/projects/photo-pruner/builds/afb67bef-1192-4a50-b7b3-6733f8051be0) finished with the new native gesture/animation dependencies. Subsequent JavaScript fixes used Metro Fast Refresh.
-- `agent --trust -p "..."` reviews found input-feedback, accessibility, and verification-script issues. Relevant findings were addressed; the third review rated the code 5/5 with no remaining actionable findings. Its verification-document update was completed after the device runs.
+- `agent --trust -p "..."` reviews found input-feedback, accessibility, and verification-script issues. Relevant findings were addressed; the final review rated readiness 5/5 with no actionable findings remaining. Reviews after the device runs also corrected the VoiceOver hint to point to buttons, singular/plural labels, and development-client recognition of a restored workspace. The footage precedes these copy/helper-only fixes.
 
 ## Observed on iPadOS 26.0 in Appetize
 
@@ -52,10 +52,10 @@ node scripts/verify-touch.mjs --phase export --record --open-picker --session-id
 
 Start swipe, controls, and keyboard with the fresh unreviewed sample; they restore that state. Persistence leaves one Keep with five stars and one Reject for export. Export's picker capture requires manual inspection and interaction to establish completion. Split phases into short sessions where the account's active-session limit requires it. Never print credentials or session files. Stop recordings and sessions even after failed assertions.
 
-The short captioned walkthrough is delivered separately as `evidence/keeper-touch-demo.mp4`; source phase recordings and its editing manifest remain under ignored `evidence/`. Recordings, screenshots, build archives, and signed metadata are not committed. The PR links this verification record; the task handoff provides the video.
+The captioned walkthrough is delivered separately as `evidence/keeper-touch-demo.mp4` (119.9 seconds, 4.12 MB). Full video decoding passed, and captions/contact sheets were inspected. Source phase recordings and its editing timeline remain under ignored `evidence/`. Recordings, screenshots, build archives, and signed metadata are not committed. The PR links this verification record; the task handoff provides the video.
 
 ## Limits
 
-- A normal CLI swipe is single-pointer: actual multi-touch cancellation, interrupted touches, physical-device frame rate, and audible VoiceOver announcement order were not manually established. Release guards and reduced-motion behavior are implemented; the guard logic has automated coverage.
+- A normal CLI swipe is single-pointer: actual multi-touch cancellation, interrupted touches, physical-device frame rate, audible VoiceOver announcement order, and competition with iPadOS gestures near screen edges were not manually established. Release guards and reduced-motion behavior are implemented; the guard logic has automated coverage.
 - The sample NEFs are synthetic and intentionally unreadable. This pass verifies UI, pairing, persistence, and native copy/export; it does not establish real camera RAW decoding. Prior macOS ORF evidence remains separately documented in [VERIFICATION.md](VERIFICATION.md).
 - Cold relaunch, revoked permissions, low disk, termination during export, external drives, and large-library performance were not manually repeated. No device performance claim is inferred from the domain burst tests.

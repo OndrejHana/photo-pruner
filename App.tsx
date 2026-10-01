@@ -63,7 +63,7 @@ function Workspace() {
     if (!receipt) return false;
     const message = command.type === 'decision' ? `${command.decision === 'keep' ? 'Kept' : 'Rejected'} ${receipt.photoName}${receipt.atEnd ? ' · Last photo' : ''}`
       : command.type === 'undo' ? 'Last change undone' : command.type === 'clearDecision' ? 'Decision cleared'
-        : command.type === 'rate' ? `${command.stars} stars` : '';
+        : command.type === 'rate' ? command.stars === 0 ? 'Stars cleared' : `${command.stars} ${command.stars === 1 ? 'star' : 'stars'}` : '';
     setFeedback(message);
     if (message) AccessibilityInfo.announceForAccessibility(message);
     return true;
@@ -110,7 +110,7 @@ function Workspace() {
       <Text style={styles.eyebrow}>YOUR KEEPERS</Text>
       <Text style={styles.hero}>Copy {exportPlan.names.length} RAW {exportPlan.names.length === 1 ? 'file' : 'files'}</Text>
       <Text style={styles.description}>Choose where to create a new Keepers folder.</Text>
-      <Text style={styles.description}>{exportPlan.unreviewed} unreviewed items and {exportPlan.keptWithoutRaw} kept items without RAW files will be skipped. JPEG companions stay in the source folder.</Text>
+      <Text style={styles.description}>{exportPlan.unreviewed} unreviewed {exportPlan.unreviewed === 1 ? 'item' : 'items'} and {exportPlan.keptWithoutRaw} kept {exportPlan.keptWithoutRaw === 1 ? 'item' : 'items'} without RAW files will be skipped. JPEG companions stay in the source folder.</Text>
       <Text style={styles.muted}>Star ratings stay in this app. Originals are never changed.</Text>
       <View style={styles.controls}><Button id="export-cancel-confirmation" label="Back to review" onPress={dismissExport} />
         <Button id="export-choose-destination" label="Choose destination" tone="keep" onPress={() => void confirmExport()} /></View>
@@ -142,7 +142,7 @@ function Workspace() {
             <Text style={styles.muted}>You can still choose to keep or reject this photo.</Text>
             <Button id="retry-preview" label="Retry preview" disabled={busy || closingPanel} onPress={() => { setImageFailure(null); setDisplayedImage(null); retryPreview(); }} />
           </View> : preview ? <Image key={photoKey} testID="photo-preview" accessible accessibilityLabel={`Preview of ${selected.name}`}
-            accessibilityHint="Swipe right to keep, left to reject, up for the next photo, or down for the previous photo. Review and navigation buttons are below."
+            accessibilityHint="Use the Keep, Reject, Previous, Next, and Undo buttons below the photo to review it."
             source={preview} style={styles.image} contentFit="contain" cachePolicy="memory"
             recyclingKey={photoKey} transition={0} onDisplay={() => { if (currentImageVisit.current === imageVisit) setDisplayedImage(imageVisit); }} onError={() => { if (currentImageVisit.current === imageVisit) setImageFailure(imageVisit); }} /> : <ActivityIndicator size="large" color={colors.green} />}
         </SwipePhoto>
@@ -157,7 +157,7 @@ function Workspace() {
           <Button id="next" label="Next" disabled={atEnd || !available} onPress={() => act({ type: 'move', delta: 1 })} />
         </View>
         <View style={styles.controls}>
-          <View style={styles.stars}>{[1, 2, 3, 4, 5].map(star => <Pressable key={star} testID={`star-${star}`} accessibilityRole="button" accessibilityLabel={`${star} stars`}
+          <View style={styles.stars}>{[1, 2, 3, 4, 5].map(star => <Pressable key={star} testID={`star-${star}`} accessibilityRole="button" accessibilityLabel={`${star} ${star === 1 ? 'star' : 'stars'}`}
             accessibilityState={{ selected: star === rating.stars, disabled: !canReview }} disabled={!canReview} onPress={() => act({ type: 'rate', stars: star })} style={styles.starButton}>
             <Text style={[styles.star, star <= rating.stars && styles.green]}>{star <= rating.stars ? '★' : '☆'}</Text>
           </Pressable>)}</View>
@@ -175,14 +175,14 @@ function Workspace() {
       {__DEV__ && <Text testID="diagnostics" style={styles.small}>{UI_REVISION}</Text>}</View>
 
     <Sheet title="Photos in this shoot" visible={panel === 'photos'} onClose={closePanel} onDismiss={finishPanelDismiss} scroll={false}>
-      <View style={styles.browserSummary}><Text testID="library-count" style={styles.body}>{photos.length} photos · {folder?.files.length} files</Text><Text style={styles.muted}>Tap a photo to return to it. Decisions stay unchanged.</Text></View>
+      <View style={styles.browserSummary}><Text testID="library-count" style={styles.body}>{photos.length} {photos.length === 1 ? 'photo' : 'photos'} · {folder?.files.length} {folder?.files.length === 1 ? 'file' : 'files'}</Text><Text style={styles.muted}>Tap a photo to return to it. Decisions stay unchanged.</Text></View>
       <FlatList data={photos} extraData={review} keyExtractor={item => item.id} initialScrollIndex={review.index}
         getItemLayout={(_, index) => ({ length: 88, offset: 88 * index, index })}
         renderItem={({ item, index }) => {
           const meta = reviewFor(review.reviews, item.id);
-          return <Pressable testID={`photo-${index}`} accessibilityRole="button" accessibilityLabel={`${item.name}, ${item.kind}, ${meta.decision}, ${meta.stars} stars`}
+          return <Pressable testID={`photo-${index}`} accessibilityRole="button" accessibilityLabel={`${item.name}, ${item.kind}, ${meta.decision}, ${meta.stars} ${meta.stars === 1 ? 'star' : 'stars'}`}
             accessibilityState={{ selected: review.index === index }} onPress={() => { select(index); setFeedback(''); closePanel(); }} style={[styles.row, review.index === index && styles.selectedRow]}>
-            <View style={styles.grow}><Text numberOfLines={1} style={styles.body}>{item.name}</Text><Text style={styles.muted}>{item.kind} · {item.files.length} files</Text></View>
+            <View style={styles.grow}><Text numberOfLines={1} style={styles.body}>{item.name}</Text><Text style={styles.muted}>{item.kind} · {item.files.length} {item.files.length === 1 ? 'file' : 'files'}</Text></View>
             <Text style={[styles.body, meta.decision === 'keep' && styles.green, meta.decision === 'reject' && styles.red]}>{meta.decision === 'unreviewed' ? 'Unreviewed' : meta.decision === 'keep' ? '✓ Keep' : '✕ Reject'}{meta.stars ? `  ${'★'.repeat(meta.stars)}` : ''}</Text>
           </Pressable>;
         }} />
