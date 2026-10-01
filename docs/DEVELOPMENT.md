@@ -61,7 +61,7 @@ Always inspect before an unfamiliar action and verify afterward. Screenshots and
 
 `appetize type` pastes ordinary characters; it did not trigger the native Y/N/star shortcuts. `press-keys.mjs` uses the CLI viewer's local WebSocket keyboard transport, matching the installed Appetize CLI 0.16.0. This protocol is an implementation detail: recheck it when upgrading the CLI. Close other browser viewers before using it. The script reports event delivery; verify the resulting UI separately.
 
-For a fresh sample shoot with no prior decisions, `node scripts/verify-ui.mjs` checks pairing metadata, rating, keep/reject, undo, persistence after rescanning, and the unreadable-RAW state. It writes assertions and screenshots to `evidence/`. The initial keyboard keep/rating demo above is compatible with this sequence, but an already rejected second photo is not. Native Files-provider popovers sometimes have sparse accessibility trees and require screenshot-driven interaction.
+For a fresh sample shoot with no prior decisions, `node scripts/verify-touch.mjs --help` lists short verification phases for swipes, touch controls, keyboard parity, persistence, and export. They write assertions and screenshots to `evidence/`. See [touch verification](TOUCH-VERIFICATION.md) for prerequisites and observed coverage. `verify-ui.mjs` remains a compatibility entry point for controls and persistence. Native Files-provider popovers sometimes have sparse accessibility trees and require screenshot-driven interaction.
 
 ```sh
 ./scripts/appetize.sh recording start evidence/demo
@@ -89,7 +89,8 @@ Install the resulting build using its EAS link. Connect development builds to th
 ## What lives where
 
 - `src/domain/library.ts`: grouping, command behavior, undo, validated review serialization.
-- `App.tsx`: review UI, export controls, and the 4:3 preview frame.
+- `App.tsx`: touch review workspace, native panels, export controls, and the 4:3 preview frame.
+- `src/components/SwipePhoto.tsx`: four-direction review gestures and feedback; `src/domain/swipe.ts` holds release rules.
 - `src/useWorkspace.ts`: folder, review, preview, and export orchestration.
 - `src/domain/async-work.ts`: bounded preview work and coalesced autosaves.
 - `modules/photo-pruner-native`: folder picker, security-scoped bookmarks, revision-scoped scans, bounded ImageIO cache, verified RAW export, atomic review writes, and hardware keys.

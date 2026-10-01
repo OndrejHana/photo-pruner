@@ -36,7 +36,7 @@ export function groupPhotos(files: PhotoFile[]): Photo[] {
   }).sort((a, b) => compare(a.name, b.name));
 }
 
-export type Command = { type: 'move'; delta: number } | { type: 'decision'; decision: Decision } | { type: 'rate'; stars: number } | { type: 'undo' };
+export type Command = { type: 'move'; delta: number } | { type: 'decision'; decision: Decision } | { type: 'clearDecision' } | { type: 'rate'; stars: number } | { type: 'undo' };
 export function commandForKey(key: string): Command | null {
   if (key === 'ArrowRight' || key === 'ArrowDown') return { type: 'move', delta: 1 };
   if (key === 'ArrowLeft' || key === 'ArrowUp') return { type: 'move', delta: -1 };
@@ -80,6 +80,15 @@ export function planKeeperExport(photos: Photo[], reviews: Reviews): ExportPlan 
 
 type UndoEntry = { id: string; previous: Review; selectedIndex: number };
 export type ReviewState = { index: number; reviews: Reviews; undo: UndoEntry[] };
+
+export type ReviewInteraction = { interactionKey: string; busy: boolean; writable: boolean };
+/** Compare against the current interaction, not just the photo ID: leaving and returning invalidates a gesture. */
+export function applyGuardedCommand(state: ReviewState, command: Command, photos: Photo[], interaction: ReviewInteraction, expectedInteractionKey?: string): ReviewState {
+  if (interaction.busy || (expectedInteractionKey !== undefined && expectedInteractionKey !== interaction.interactionKey)
+    || (!interaction.writable && command.type !== 'move')) return state;
+  return applyCommand(state, command, photos);
+}
+
 export function applyCommand(state: ReviewState, command: Command, photos: Photo[]): ReviewState {
   const photo = photos[state.index];
   if (!photo) return state;
@@ -95,8 +104,10 @@ export function applyCommand(state: ReviewState, command: Command, photos: Photo
   }
   if (command.type === 'rate' && !Number.isFinite(command.stars)) return state;
   const previous = reviewFor(state.reviews, photo.id);
-  const next = command.type === 'rate' ? { ...previous, stars: Math.max(0, Math.min(5, Math.round(command.stars))) } : { ...previous, decision: command.decision };
+  const next = command.type === 'rate' ? { ...previous, stars: Math.max(0, Math.min(5, Math.round(command.stars))) }
+    : { ...previous, decision: command.type === 'clearDecision' ? 'unreviewed' as const : command.decision };
   if (command.type === 'rate' && next.stars === previous.stars) return state;
+  if (command.type === 'clearDecision' && next.decision === previous.decision) return state;
   // A held key at the end of the folder must not erase useful undo history.
   if (command.type === 'decision' && next.decision === previous.decision && state.index === photos.length - 1) return state;
   return { reviews: { ...state.reviews, [photo.id]: next },

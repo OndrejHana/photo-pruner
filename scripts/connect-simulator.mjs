@@ -1,9 +1,10 @@
 import { execFileSync } from 'node:child_process';
 import { readFileSync, mkdirSync } from 'node:fs';
 const url = process.argv[2];
+const sessionOptions = process.argv[3] ? ['--session-id', process.argv[3]] : [];
 if (!url || !/^https?:\/\//.test(url)) throw new Error('Pass the Metro HTTP(S) tunnel URL.');
 mkdirSync('evidence', { recursive: true });
-const run = (...args) => execFileSync('./scripts/appetize.sh', args, { encoding: 'utf8', timeout: 55000 });
+const run = (...args) => execFileSync('./scripts/appetize.sh', [...args, ...sessionOptions], { encoding: 'utf8', timeout: 55000 });
 const flatten = node => [node, ...(node.children ?? []).flatMap(flatten)];
 function inspect(name) { run('inspect', `evidence/${name}.json`); return JSON.parse(readFileSync(`evidence/${name}.json`)); }
 run('inspect', 'evidence/launcher-ready.json', '--select-text', 'Enter URL manually', '--timeout', '15000');
