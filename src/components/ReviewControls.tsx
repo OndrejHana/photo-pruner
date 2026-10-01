@@ -27,10 +27,10 @@ export function Sheet({ title, visible, onClose, children, scroll = true, onDism
 
 export const colors = { background: '#111412', panel: '#1d231f', border: '#343d35', text: '#f2f5ed', muted: '#b0baac', green: '#b8edab', red: '#f6aaa0' };
 const styles = StyleSheet.create({
-  button: { minHeight: 48, minWidth: 48, paddingHorizontal: 18, paddingVertical: 10, justifyContent: 'center', alignItems: 'center', backgroundColor: '#28312a', borderRadius: 14, borderWidth: 1, borderColor: '#3d483e' },
-  buttonText: { color: '#f2f5ed', fontSize: 16, fontWeight: '600' }, darkText: { color: '#172313' },
-  keep: { backgroundColor: '#b8edab', borderColor: '#b8edab', minWidth: 120 },
-  reject: { backgroundColor: '#432d2b', borderColor: '#76504b', minWidth: 120 },
+  button: { minHeight: 48, minWidth: 48, paddingHorizontal: 12, paddingVertical: 10, justifyContent: 'center', alignItems: 'center', backgroundColor: '#28312a', borderRadius: 9, borderWidth: 1, borderColor: '#3d483e' },
+  buttonText: { color: '#f2f5ed', fontSize: 14, fontWeight: '600' }, darkText: { color: '#172313' },
+  keep: { backgroundColor: '#b8edab', borderColor: '#b8edab' },
+  reject: { backgroundColor: '#432d2b', borderColor: '#76504b' },
   active: { borderColor: '#b8edab', borderWidth: 2 }, dim: { opacity: 0.4 },
   sheet: { flex: 1, backgroundColor: '#171d19' }, sheetHeader: { padding: 22, gap: 16, flexDirection: 'row', alignItems: 'center', borderBottomWidth: 1, borderColor: '#343d35' },
   sheetTitle: { flex: 1, color: '#f2f5ed', fontSize: 24, fontWeight: '600' }, sheetContent: { padding: 24, gap: 20 },

@@ -22,6 +22,7 @@
     "cbor-x": "^1.6.0",
     "eslint": "^9.0.0",
     "eslint-config-expo": "~57.0.2",
+    "react-test-renderer": "^19.2.3",
     "typescript": "~6.0.3"
   },
   "scripts": {
@@ -29,7 +30,7 @@
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web",
-    "test": "node --test src/domain/*.test.ts",
+    "test": "node --test src/domain/*.test.ts tests/ui/*.test.mjs",
     "typecheck": "tsc --noEmit",
     "check": "npm run lint && npm run typecheck && npm test",
     "build:sim": "eas build --platform ios --profile development-simulator",

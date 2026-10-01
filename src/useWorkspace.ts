@@ -1,11 +1,11 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type SetStateAction } from 'react';
 import { AppState } from 'react-native';
 import Native, { type ExportProgress, type ExportResult, type Folder } from '../modules/photo-pruner-native';
 import { CoalescingWriter, LatestTask, type SaveStatus } from './domain/async-work';
 import { applyGuardedCommand, groupPhotos, planKeeperExport, previewCandidates, readReview, serializeReview, type Command, type ExportPlan, type Photo, type ReviewState } from './domain/library';
+import { afterReviewSaved, clearTransientWorkspaceIssues, clearWorkspaceIssue, dismissWorkspaceIssue, errorMessage, reportWorkspaceIssue, workspaceError, workspaceIssue, type ErrorSource, type WorkspaceIssues } from './domain/workspace-errors';
 
-export const errorMessage = (error: unknown) => (error instanceof Error ? error.message : String(error))
-  .replace(/^UnexpectedException: /, '').replace(/ \(at ExpoModulesCore\/[^)]+\)$/, '');
+export { errorMessage } from './domain/workspace-errors';
 type Save = { folderID: string; review: ReviewState; photos: Photo[] };
 type Preview = { key: string; uri: string | null; error: string | null };
 type PreviewRequest = { revision: string; names: string[] };
@@ -16,7 +16,8 @@ export function useWorkspace() {
   const [review, setReview] = useState<ReviewState>({ index: 0, reviews: {}, undo: [] });
   const [busy, setBusy] = useState(true);
   const [writable, setWritable] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [issues, setIssues] = useState<WorkspaceIssues>([]);
+  const error = workspaceError(issues);
   const [saveStatus, setSaveStatus] = useState<SaveStatus>({ state: 'saved' });
   const [preview, setPreview] = useState<Preview | null>(null);
   const [previewAttempt, setPreviewAttempt] = useState(0);
@@ -29,7 +30,23 @@ export function useWorkspace() {
   const interactionSerial = useRef(0);
   const preparedExport = useRef<ExportPlan | null>(null);
   const exportStarted = useRef(false);
-  const writer = useMemo(() => new CoalescingWriter<Save>(value => Native.saveReview(value.folderID, serializeReview(value.review, value.photos)), setSaveStatus), []);
+  const reportError = useCallback((error: unknown, source: ErrorSource) => {
+    setIssues(previous => reportWorkspaceIssue(previous, workspaceIssue(error, source)));
+  }, []);
+  const clearSaveError = useCallback(() => setIssues(previous => clearWorkspaceIssue(previous, 'save')), []);
+  const clearTransientErrors = useCallback(() => setIssues(clearTransientWorkspaceIssues), []);
+  const setError = useCallback((value: SetStateAction<string | null>) => {
+    setIssues(previous => {
+      const message = typeof value === 'function' ? value(workspaceError(previous)) : value;
+      if (message === null) return dismissWorkspaceIssue(previous);
+      return message === workspaceError(previous) ? previous : reportWorkspaceIssue(previous, { source: 'general', message });
+    });
+  }, []);
+  const writer = useMemo(() => new CoalescingWriter<Save>(value => Native.saveReview(value.folderID, serializeReview(value.review, value.photos)), status => {
+    setSaveStatus(status);
+    if (status.state === 'saved') clearSaveError();
+    else if (status.state === 'failed') reportError(status.error, 'save');
+  }), [clearSaveError, reportError]);
   const decoder = useMemo(() => new LatestTask<PreviewRequest, string>(value => Native.previewCandidates(value.revision, value.names)), []);
   const photos = useMemo(() => groupPhotos(folder?.files ?? []), [folder]);
   const selected = photos[review.index];
@@ -55,28 +72,29 @@ export function useWorkspace() {
     current.current = { folder: next, review: restored, photos, busy: true, writable: !loadError, interactionKey: current.current.interactionKey };
     invalidateInteraction();
     preparedExport.current = null;
-    setFolder(next); setReview(restored); setWritable(!loadError); setError(loadError);
+    setFolder(next); setReview(restored); setWritable(!loadError);
+    setIssues(loadError ? [{ source: 'review', message: loadError }] : []);
     setSaveStatus({ state: 'saved' }); setExportResult(null);
   }, [invalidateInteraction]);
 
   const load = useCallback(async (operation: () => Promise<Folder | null>) => {
     if (current.current.busy) return;
-    lock(true); setError(null);
+    lock(true); clearTransientErrors();
     decoder.clear();
     try {
-      await writer.flush(); // Never activate another folder while the current review is unsaved.
-      await acceptFolder(await operation());
-    } catch (error) { setError(errorMessage(error)); }
+      // Never activate another folder while the current review is unsaved.
+      await afterReviewSaved(writer, async () => acceptFolder(await operation()));
+    } catch (error) { reportError(error, 'folder'); }
     finally { lock(false); }
-  }, [acceptFolder, decoder, lock, writer]);
+  }, [acceptFolder, clearTransientErrors, decoder, lock, reportError, writer]);
 
   useEffect(() => {
     let mounted = true;
     Native.restoreFolder().then(next => { if (mounted) return acceptFolder(next); }).catch(error => {
-      if (mounted) setError(`Could not reopen the previous folder. Choose it again. ${errorMessage(error)}`);
+      if (mounted) reportError(`Could not reopen the previous folder. Choose it again. ${errorMessage(error)}`, 'folder');
     }).finally(() => { if (mounted) lock(false); });
     return () => { mounted = false; decoder.clear(); void writer.flush().catch(() => {}); };
-  }, [acceptFolder, decoder, lock, writer]);
+  }, [acceptFolder, decoder, lock, reportError, writer]);
 
   useEffect(() => {
     const subscription = AppState.addEventListener('change', state => {
@@ -130,15 +148,17 @@ export function useWorkspace() {
   const prepareExport = useCallback(async () => {
     const state = current.current;
     if (state.busy || !state.folder || !state.writable) return;
-    lock(true); setError(null); setExportResult(null);
+    lock(true); clearTransientErrors(); setExportResult(null);
     try {
-      await writer.flush();
-      const plan = planKeeperExport(state.photos, state.review.reviews);
-      if (!plan.names.length) throw new Error('Keep at least one RAW photo before exporting. JPEG-only items cannot be exported.');
+      const plan = await afterReviewSaved(writer, () => {
+        const plan = planKeeperExport(state.photos, state.review.reviews);
+        if (!plan.names.length) throw new Error('Keep at least one RAW photo before exporting. JPEG-only items cannot be exported.');
+        return plan;
+      });
       preparedExport.current = plan;
       setExportPlan(plan);
-    } catch (error) { setError(errorMessage(error)); lock(false); }
-  }, [lock, writer]);
+    } catch (error) { reportError(error, 'export'); lock(false); }
+  }, [clearTransientErrors, lock, reportError, writer]);
   const dismissExport = useCallback(() => {
     if (!preparedExport.current || exportStarted.current) return;
     preparedExport.current = null;
@@ -152,20 +172,20 @@ export function useWorkspace() {
     preparedExport.current = null;
     setExporting(true); setProgress(null); setExportPlan(null);
     try { setExportResult(await Native.exportKeepers(target.revision, plan.names)); }
-    catch (error) { setError(errorMessage(error)); }
+    catch (error) { reportError(error, 'export'); }
     finally { exportStarted.current = false; setExporting(false); lock(false); }
-  }, [lock]);
+  }, [lock, reportError]);
   const cancelExport = useCallback(async () => {
     try { await Native.cancelExport(); }
-    catch (error) { setError(errorMessage(error)); }
-  }, []);
+    catch (error) { reportError(error, 'export'); }
+  }, [reportError]);
   const retrySave = useCallback(async () => {
     try {
-      await writer.flush();
-      setError(previous => previous?.startsWith('Could not save review: ') ? null : previous);
+      await afterReviewSaved(writer, () => {});
+      clearSaveError();
     }
-    catch (error) { setError(`Could not save review: ${errorMessage(error)}`); }
-  }, [writer]);
+    catch (error) { reportError(error, 'save'); }
+  }, [clearSaveError, reportError, writer]);
   const dismissExportResult = useCallback(() => setExportResult(null), []);
 
   return { folder, photos, review, selected, busy, writable, interactionKey, error, setError, saveStatus, preview: preview?.key === previewKey ? preview : null,
