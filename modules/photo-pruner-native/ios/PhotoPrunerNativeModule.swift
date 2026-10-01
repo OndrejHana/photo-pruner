@@ -163,16 +163,13 @@ public class PhotoPrunerNativeModule: Module {
     return base.appendingPathComponent(id + ".json")
   }
   private func demoURL() -> URL {
-    FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0].appendingPathComponent("Sample shoot", isDirectory: true)
+    DemoFixtures.directory(in: FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0])
   }
 
   private func createDemo() throws -> URL {
-    let directory = demoURL()
-    try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
     let colors: [UIColor] = [.systemTeal, .systemOrange, .systemIndigo]
-    for number in 1...3 {
-      let file = directory.appendingPathComponent(String(format: "DSC_%04d.JPG", number))
-      if FileManager.default.fileExists(atPath: file.path) { continue }
+    let documents = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+    return try DemoFixtures.prepare(in: documents) { number in
       let format = UIGraphicsImageRendererFormat()
       format.scale = 1
       let image = UIGraphicsImageRenderer(size: CGSize(width: 1600, height: 1067), format: format).image { context in
@@ -181,18 +178,10 @@ public class PhotoPrunerNativeModule: Module {
         colors[number - 1].setFill()
         UIBezierPath(ovalIn: CGRect(x: CGFloat(250 + number * 70), y: 90, width: 750, height: 750)).fill()
         ("SAMPLE 0\(number)" as NSString).draw(at: CGPoint(x: 90, y: 850), withAttributes: [.font: UIFont.monospacedSystemFont(ofSize: 84, weight: .bold), .foregroundColor: UIColor.white])
-        ("Photo Pruner · preview fixture" as NSString).draw(at: CGPoint(x: 96, y: 970), withAttributes: [.font: UIFont.systemFont(ofSize: 30), .foregroundColor: UIColor.lightGray])
+        ("Keeper · preview fixture" as NSString).draw(at: CGPoint(x: 96, y: 970), withAttributes: [.font: UIFont.systemFont(ofSize: 30), .foregroundColor: UIColor.lightGray])
       }
       guard let data = image.jpegData(compressionQuality: 0.9) else { throw prunerError("Could not create sample images.") }
-      try data.write(to: file, options: .atomic)
+      return data
     }
-    // Invalid RAW data tests grouping and graceful failure, not camera RAW decoding.
-    for name in ["DSC_0001.NEF", "DSC_0002.NEF", "DSC_0004.NEF"] {
-      let target = directory.appendingPathComponent(name)
-      if !FileManager.default.fileExists(atPath: target.path) {
-        try Data("Synthetic pairing fixture. Not a decodable camera RAW file.\n".utf8).write(to: target, options: .atomic)
-      }
-    }
-    return directory
   }
 }

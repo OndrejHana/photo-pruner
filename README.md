@@ -1,4 +1,4 @@
-# Photo Pruner
+# Keeper
 
 Review a folder on your iPad and copy its RAW keepers into a new folder. Built with Expo/React Native and a local Swift module, developed from Linux with EAS and Appetize.
 
@@ -37,6 +37,6 @@ Read [the development workflow](docs/DEVELOPMENT.md) for builds and the Linux/Ap
 
 ## Samples
 
-The Sample shoot button creates three synthetic JPEG images and three deliberately invalid `.NEF` files in Documents/Sample shoot. They form four items: two pairs, one JPEG-only item, and one RAW-only item. These exercise grouping, keyboard controls, export mechanics, and preview errors; they are not real RAW photos.
+The Sample shoot button creates three synthetic JPEG images and three deliberately invalid `.NEF` files in Documents/Sample shoot v2. They form four items: two pairs, one JPEG-only item, and one RAW-only item. These exercise grouping, keyboard controls, export mechanics, and preview errors; they are not real RAW photos. Fixture changes use a new versioned folder, so upgrades generate the current samples without overwriting earlier samples or user-added files. Older folders and their saved reviews remain available through Open folder; each new sample version starts a separate review.
 
 Native CI separately downloads SHA-256-verified CC0 Olympus E-P3 and E-M1 Mark II ORFs from [raw.pixls.us](https://raw.pixls.us/). Both produce 2400×1800 previews. Camera modes beyond these samples still need validation on the target iPad.
