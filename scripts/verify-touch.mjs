@@ -7,20 +7,23 @@ import { resolve, join } from 'node:path';
 
 const args = process.argv.slice(2);
 if (args.includes('--help')) {
-  console.log(`Usage: node scripts/verify-touch.mjs --phase legacy|swipe|controls|keyboard|persistence|export
+  console.log(`Usage: node scripts/verify-touch.mjs --phase legacy|swipe|controls|feedback|keyboard|persistence|export
   [--session-id ID] [--session-file artifacts/appetize-session.json]
   [--evidence-dir evidence/touch-DATE] [--ids ignored-config.json]
   [--record] [--open-picker]
 
 Requires a connected landscape iPad session with Sample shoot open.
-legacy, swipe, controls and keyboard require a fresh, unreviewed four-photo sample.
+legacy, swipe, controls, feedback and keyboard require a fresh, unreviewed four-photo sample.
+feedback covers rating toggle, feedback Undo, completion and reopened progress;
+it restores a clean review before returning. Decision decoration is captured for visual review.
 legacy requires a 1366×1024 landscape session and --session-file for native keys.
 persistence leaves one kept photo (5 stars) and one rejected photo for export.
 export checks confirmation; --open-picker also opens the native destination picker.
 ID config overrides: viewer, browse, browserClose, photoPrefix, name, position,
 decision, stars, summary, next, previous, keep, reject, undo, clearStars, rescan,
 folderMenu, details, clearDecision, export, exportConfirm, sidebar, previewStatus,
-frame, pairedFiles, keyboardHint, openFolder, sampleFolder. Browser selection closes automatically.
+frame, pairedFiles, keyboardHint, openFolder, sampleFolder, reviewProgress,
+reviewComplete, feedbackUndo. Browser selection closes automatically.
 Buttons and keys wait only for interactive controls; swipes additionally wait for
 preview-status to read Preview ready or Preview unavailable after actual display/error.
 Each phase writes assertions.json and screenshots; recordings require --record.
@@ -40,7 +43,7 @@ for (let index = 0; index < args.length; index++) {
   }
 }
 const phase = values.get('--phase');
-assert.ok(['legacy', 'swipe', 'controls', 'keyboard', 'persistence', 'export'].includes(phase), 'Choose --phase; see --help.');
+assert.ok(['legacy', 'swipe', 'controls', 'feedback', 'keyboard', 'persistence', 'export'].includes(phase), 'Choose --phase; see --help.');
 if (phase === 'legacy' || phase === 'keyboard') assert.ok(values.has('--session-file'), `${phase} requires --session-file for native keyboard events.`);
 const directory = resolve(values.get('--evidence-dir') ?? `evidence/touch-${new Date().toISOString().replaceAll(':', '-')}-${phase}`);
 assert.ok(directory.startsWith(`${resolve('evidence')}/`), 'Evidence must remain in the ignored evidence directory.');
@@ -53,6 +56,7 @@ const ids = {
   details: 'photo-details', clearDecision: 'clear-decision', exportConfirm: 'export-choose-destination',
   sidebar: 'photo-sidebar', previewStatus: 'preview-status', frame: 'preview-frame',
   pairedFiles: 'paired-files', keyboardHint: 'keyboard-hint', openFolder: 'open-folder', sampleFolder: 'sample-folder',
+  reviewProgress: 'review-progress', reviewComplete: 'review-complete', feedbackUndo: 'feedback-undo',
   ...(values.has('--ids') ? JSON.parse(readFileSync(values.get('--ids'), 'utf8')) : {}),
 };
 const sessionOptions = values.has('--session-id') ? ['--session-id', values.get('--session-id')] : [];
@@ -101,9 +105,17 @@ function check(name, { index, decision = 'Unreviewed', stars = 0, kept = 0, reje
   assert.equal(labelFor(nodes, ids.decision), decision, `${name}: decision`);
   assert.equal(labelFor(nodes, ids.stars), `${stars} / 5 stars`, `${name}: rating`);
   assert.equal(labelFor(nodes, ids.summary), `${kept} kept · ${rejected} rejected`, `${name}: totals`);
-  if (phase === 'legacy') {
+  if (phase === 'legacy' || phase === 'feedback') {
     assertSidebar(nodes, name);
     assert.ok([true, 'true', 1].includes(nodeFor(nodes, `${ids.photoPrefix}${index}`)?.attributes?.selected), `${name}: sidebar selection must follow the current photo`);
+  }
+  if (phase === 'feedback') {
+    assertVisible(nodes, [ids.reviewProgress, ids.pairedFiles, ids.keyboardHint, ids.keep, ids.reject, ids.undo], name);
+    const complete = kept + rejected === 4;
+    assert.equal(!!nodeFor(nodes, ids.reviewComplete), complete, `${name}: completion visibility`);
+    assert.equal(labelFor(nodes, 'review-remaining'), complete ? 'Review complete' : `${4 - kept - rejected} unreviewed`, `${name}: remaining photos`);
+    if (complete) assert.match(nodes.map(node => node.attributes?.label ?? '').join('\n'), /All 4 reviewed/, `${name}: completion copy`);
+    for (const id of [ids.keep, ids.reject, `${ids.photoPrefix}${index}`]) assert.ok(isEnabled(nodeFor(nodes, id)), `${name}: ${id} remains usable`);
   }
   run('screenshot', path.slice(0, -5));
   results.assertions.push({ name, at: new Date().toISOString(), status: 'passed', index, decision, stars, kept, rejected, hierarchy: path });
@@ -234,6 +246,25 @@ try {
     tap(ids.next); check('next-button', { index: 1, kept: 1 });
     tap(ids.undo); check('undo-keep-button', { index: 0, stars: 5 });
     tap(ids.undo); check('restore-clean-sample', { index: 0 });
+  } else if (phase === 'feedback') {
+    select(0); check('feedback-initial', { index: 0 });
+    tap('star-5'); check('rating-before-toggle', { index: 0, stars: 5 });
+    tap('star-5'); check('selected-star-clears-without-reviewing', { index: 0 });
+    // A fresh receipt keeps the feedback Undo available while crossing the CLI.
+    tap('star-4'); tap(ids.feedbackUndo); check('feedback-undo-restores-cleared-rating', { index: 0 });
+    tap(ids.undo); check('undo-toggle-restores-five-stars', { index: 0, stars: 5 });
+    tap(ids.undo); check('rating-history-restored-clean', { index: 0 });
+    tap(ids.keep); select(0); check('reviewed-photo-decoration', { index: 0, decision: 'Keep', kept: 1 });
+    results.assertions.at(-1).visualReview = 'Screenshot captures the Keep ring/corner badge; overlay is hidden from accessibility.';
+    // Browsing clears the old receipt; a rating creates a new feedback Undo.
+    tap('star-4'); tap(ids.feedbackUndo); tap(ids.undo); check('feedback-and-decision-undo', { index: 0 });
+    tap(ids.keep); tap(ids.reject); tap(ids.keep); tap(ids.reject);
+    check('completion-preserves-reviewer-and-sidebar', { index: 3, decision: 'Reject', kept: 2, rejected: 2 });
+    tap(ids.undo); check('undo-reopens-progress', { index: 3, kept: 2, rejected: 1 });
+    tap(ids.reject); select(0); tap(ids.clearDecision);
+    check('clear-decision-reopens-progress', { index: 0, kept: 1, rejected: 2 });
+    tap(ids.undo); tap(ids.undo); tap(ids.undo); tap(ids.undo); tap(ids.undo);
+    check('feedback-restores-clean-sample', { index: 0 });
   } else if (phase === 'keyboard') {
     select(0); check('initial', { index: 0 });
     key('5', 'y'); check('keyboard-rate-and-keep', { index: 1, kept: 1 });

@@ -1,5 +1,7 @@
 # Touch verification — 1 October 2026, v2
 
+For the subsequent preview/animation improvements and their verification, see [Interaction review — v3](INTERACTION-REVIEW.md). This page retains the v2 evidence.
+
 The touch workspace supports quick culling without zoom. Swipe right keeps and advances; left rejects and advances; up/down browse next/previous without changing decisions. Buttons and hardware keys share the same command path, sequential advancement, and Undo behavior. The existing keyboard mapping remains Y/N, left/up previous, right/down next, 0–5 stars, and U Undo.
 
 ## Implementation and scope

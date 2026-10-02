@@ -114,7 +114,8 @@ test('App passes the captured swipe item key through the hook and rejects a rele
   assert.equal(app.text('selected-name'), 'DSC_0002');
   assert.notEqual(app.swipe().props.itemKey, oldKey);
   // Invoke the App callback directly; native gesture recognition is outside this harness.
-  await app.event(() => queuedSwipe('reject', oldKey));
+  assert.equal(await app.event(() => queuedSwipe('reject', oldKey)), false,
+    'a stale release must not authorize a decorative commit animation');
   assert.equal(app.text('selected-name'), 'DSC_0002');
   assert.equal(app.text('decision'), 'Unreviewed');
   assert.equal(app.text('review-summary'), '0 kept · 0 rejected');
@@ -123,8 +124,27 @@ test('App passes the captured swipe item key through the hook and rejects a rele
   await app.event(app.image().props.onDisplay);
   assert.equal(app.swipe().props.canDecide, true);
   const freshKey = app.swipe().props.itemKey;
-  await app.event(() => app.swipe().props.onSwipe('keep', freshKey));
+  assert.equal(await app.event(() => app.swipe().props.onSwipe('keep', freshKey)), true);
   assert.equal(app.text('selected-name'), 'DSC_0003');
   assert.equal(app.text('review-summary'), '1 kept · 0 rejected');
   assert.equal(app.byID('photo-1').props.accessibilityLabel.includes('keep'), true);
+});
+
+test('two captured swipe releases queued before React commits accept exactly one decision and advance', async t => {
+  const app = await mountApp();
+  t.after(() => app.unmount());
+  await app.resolvePreviewFor('DSC_0001.JPG');
+  await app.event(app.image().props.onDisplay);
+  assert.equal(app.swipe().props.canDecide, true);
+  const { onSwipe, itemKey } = app.swipe().props;
+  const accepted = await app.event(() => [onSwipe('keep', itemKey), onSwipe('reject', itemKey)]);
+  assert.deepEqual(accepted, [true, false]);
+  assert.equal(app.text('selected-name'), 'DSC_0002');
+  assert.equal(app.text('review-summary'), '1 kept · 0 rejected');
+  assert.match(app.byID('photo-0').props.accessibilityLabel, /keep, 0 stars/);
+  assert.match(app.byID('photo-1').props.accessibilityLabel, /unreviewed, 0 stars/);
+  await app.press('undo');
+  assert.equal(app.text('selected-name'), 'DSC_0001');
+  assert.equal(app.text('review-summary'), '0 kept · 0 rejected');
+  assert.equal(app.byID('undo').props.disabled, true, 'only the accepted release enters Undo history');
 });

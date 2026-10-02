@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { canCommitSwipe, classifySwipe, swipeAllowed, swipeAxis, swipeThreshold,
+import { canCommitSwipe, classifySwipe, swipeAllowed, swipeAxis, swipeExit, swipeFeedback, swipeThreshold, swipeTravel,
   type SwipeCommit, type SwipeCommitState, type SwipeRelease } from './swipe.ts';
 
 const release = (overrides: Partial<SwipeRelease> = {}): SwipeRelease => ({
@@ -115,4 +115,69 @@ test('a queued release observes current browsing boundaries without blocking dec
   assert.equal(canCommitSwipe(pending({ action: 'next' }), current({ canNext: false })), false);
   assert.equal(canCommitSwipe(pending({ action: 'keep' }), current({ canNext: false })), true);
   assert.equal(canCommitSwipe(pending({ action: 'reject' }), current({ canNext: false })), true);
+});
+
+const available = { canDecide: true, canPrevious: true, canNext: true };
+
+test('edge feedback progresses toward the threshold, arms exactly at it, and de-arms when dragged back', () => {
+  const initial = swipeFeedback(release({ x: 18 }), available);
+  assert.equal(initial.action, 'keep');
+  assert.equal(initial.armed, false);
+  assert.ok(initial.progress > 0 && initial.progress < 0.25);
+  const nearer = swipeFeedback(release({ x: 70 }), available);
+  assert.ok(nearer.progress > initial.progress && nearer.progress < 1);
+  assert.equal(nearer.armed, false);
+  assert.deepEqual(swipeFeedback(release({ x: 96 }), available), { action: 'keep', available: true, armed: true, progress: 1 });
+  assert.equal(swipeFeedback(release({ x: 95 }), available).armed, false);
+});
+
+test('feedback uses the release classifier for flicks, diagonal ambiguity, and axis changes', () => {
+  assert.equal(swipeFeedback(release({ x: 32, velocityX: 950 }), available).armed, true);
+  for (const invalid of [
+    release({ x: 31, velocityX: 2000 }), release({ x: 40, velocityX: 949 }),
+    release({ x: 40, velocityX: -1200 }), release({ x: 40, velocityX: 1000, velocityY: 1000 }),
+    release({ x: 120, y: 110 }), release({ x: 40, y: -180, velocityX: 1500 }),
+  ]) {
+    const feedback = swipeFeedback(invalid, available);
+    assert.equal(classifySwipe(invalid), null);
+    assert.equal(feedback.armed, false);
+    assert.ok(feedback.progress < 1, 'an ambiguous or short release must not show completed feedback');
+  }
+  assert.deepEqual(swipeFeedback(release({ axis: null }), available), { action: null, available: false, armed: false, progress: 0 });
+});
+
+test('blocked directions never arm, while preview readiness does not block browsing feedback', () => {
+  assert.deepEqual(swipeFeedback(release(), { ...available, canDecide: false }),
+    { action: 'keep', available: false, armed: false, progress: 0 });
+  assert.equal(swipeFeedback(release({ x: -100 }), { ...available, canDecide: false }).armed, false);
+  const next = release({ axis: 'vertical', x: 0, y: -100 });
+  assert.equal(swipeFeedback(next, { ...available, canDecide: false }).armed, true);
+  assert.equal(swipeFeedback(next, { ...available, canNext: false }).progress, 0);
+  assert.equal(swipeFeedback(release({ axis: 'vertical', x: 0, y: 100 }), { ...available, canPrevious: false }).armed, false);
+});
+
+test('available drags track 1:1 through 1.5 thresholds and resist continuously beyond that', () => {
+  for (const distance of [0, 18, 96, 144]) assert.equal(swipeTravel(distance, 96, true), distance);
+  const beyond = swipeTravel(160, 96, true);
+  assert.ok(beyond > 144 && beyond < 160);
+  assert.equal(swipeTravel(-160, 96, true), -beyond);
+  assert.ok(swipeTravel(1000, 96, true) > beyond && swipeTravel(1000, 96, true) < 195);
+  assert.ok(Math.abs(swipeTravel(144.001, 96, true) - swipeTravel(143.999, 96, true)) < 0.0021);
+});
+
+test('unavailable directions resist heavily and malformed presentation measurements stay at rest', () => {
+  const blocked = swipeTravel(96, 96, false);
+  assert.ok(blocked > 0 && blocked < 18 && blocked < 96 * 0.2);
+  assert.equal(swipeTravel(-96, 96, false), -blocked);
+  assert.ok(swipeTravel(10000, 96, false) <= 18);
+  assert.equal(swipeTravel(NaN, 96, true), 0);
+  assert.equal(swipeTravel(96, 0, true), 0);
+  assert.equal(swipeFeedback(release({ velocityX: NaN }), available).armed, false);
+});
+
+test('successful presentation continues beyond the frame in the committed direction', () => {
+  assert.deepEqual(swipeExit('keep', 800, 600), { x: 832, y: 0, rotation: 6 });
+  assert.deepEqual(swipeExit('reject', 800, 600), { x: -832, y: 0, rotation: -6 });
+  assert.deepEqual(swipeExit('next', 800, 600), { x: 0, y: -632, rotation: 0 });
+  assert.deepEqual(swipeExit('previous', 800, 600), { x: 0, y: 632, rotation: 0 });
 });

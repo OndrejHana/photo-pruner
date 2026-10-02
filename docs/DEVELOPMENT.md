@@ -30,7 +30,7 @@ Wait for EAS status FINISHED; download the simulator `.tar.gz` artifact from EAS
 
 Save the returned build id. Any native Swift change, native dependency change, or Info.plist change requires a fresh build and upload. JavaScript changes use the current compatible client with Metro.
 
-The touch client includes Gesture Handler, Reanimated, and Worklets. The v2 layout and error-recovery changes reuse that client through Metro; no further native build is needed for those JavaScript changes. `npm run check` includes domain tests and the real App/hook harness under `tests/ui`; its native, image, gesture, and Modal bindings are mocked and do not replace simulator or physical-device verification.
+The touch client includes Gesture Handler, Reanimated, and Worklets. The v2 layout/error-recovery and v3 interaction changes reuse that client through Metro; no further native build is needed for those JavaScript changes. `npm run check` includes domain tests and the real App/hook harness under `tests/ui`; its native, image, gesture, and Modal bindings are mocked and do not replace simulator or physical-device verification.
 
 ## Run and control
 
@@ -65,7 +65,7 @@ Always inspect before an unfamiliar action and verify afterward. Screenshots and
 
 For a fresh sample shoot with no prior decisions, `node scripts/verify-touch.mjs --help` lists short phases for legacy workflow parity, swipes, touch controls, keyboard, persistence, and export. The legacy phase requires 1366×1024 landscape plus `--session-file`; it checks the persistent sidebar, direct folder controls, visible pairing/keyboard hints, and preview size. Narrow layouts expose the list through Photos. Export remains inline and locks the visible workspace. Buttons and keys work during decoding; decision swipes wait for a displayed image or explicit preview error.
 
-Each phase writes assertions and screenshots to `evidence/`. See [touch verification](TOUCH-VERIFICATION.md) for prerequisites, observed coverage, and limits. Use separate evidence directories per phase. `verify-ui.mjs` remains a compatibility entry point for controls and persistence and splits a supplied evidence directory into phase subdirectories. Native Files-provider popovers sometimes have sparse accessibility trees and require screenshot-driven interaction.
+Each phase writes assertions and screenshots to `evidence/`. See [touch verification](TOUCH-VERIFICATION.md) for prerequisites and preserved workflow coverage, and [the interaction review](INTERACTION-REVIEW.md) for v3 changes, timing, and limits. Use separate evidence directories per phase. `verify-ui.mjs` remains a compatibility entry point for controls and persistence and splits a supplied evidence directory into phase subdirectories. Native Files-provider popovers sometimes have sparse accessibility trees and require screenshot-driven interaction.
 
 ```sh
 ./scripts/appetize.sh recording start evidence/demo
@@ -96,7 +96,8 @@ Install the resulting build using its EAS link. Connect development builds to th
 - `App.tsx`: persistent wide sidebar, narrow Photos sheet, direct folder/review controls, inline export, and the 4:3 preview frame.
 - `src/components/SwipePhoto.tsx`: four-direction review gestures and feedback; `src/domain/swipe.ts` holds release rules.
 - `src/useWorkspace.ts`: folder, review, preview, and export orchestration.
-- `src/domain/async-work.ts`: bounded preview work and coalesced autosaves.
+- `src/domain/preview-scheduler.ts`: bounded current/neighbor preview preparation and memory warming.
+- `src/domain/async-work.ts`: coalesced autosaves.
 - `src/domain/workspace-errors.ts`: error provenance and save-before-operation handling; save recovery preserves unrelated review/folder/export errors.
 - `tests/ui`: actual App/hook command and recovery tests with mocked platform bindings.
 - `modules/photo-pruner-native`: folder picker, security-scoped bookmarks, revision-scoped scans, bounded ImageIO cache, verified RAW export, atomic review writes, and hardware keys.

@@ -2,14 +2,14 @@ import type { ReactNode } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-export function Button({ label, onPress, id, active = false, disabled = false, tone = 'default', accessibilityLabel = label.replace(/[✓✕↑↓←→]/g, '').trim() }: {
-  label: string; onPress: () => void; id: string; active?: boolean; disabled?: boolean; tone?: 'default' | 'keep' | 'reject'; accessibilityLabel?: string;
+export function Button({ label, onPress, id, active = false, disabled = false, tone = 'default', prominent = false, accessibilityLabel = label.replace(/[✓✕↑↓←→]/g, '').trim() }: {
+  label: string; onPress: () => void; id: string; active?: boolean; disabled?: boolean; tone?: 'default' | 'keep' | 'reject' | 'quiet'; prominent?: boolean; accessibilityLabel?: string;
 }) {
   return <Pressable testID={id} accessibilityRole="button" accessibilityLabel={accessibilityLabel}
     accessibilityState={{ selected: active, disabled }} disabled={disabled} onPress={onPress}
-    style={({ pressed }) => [styles.button, tone === 'keep' && styles.keep, tone === 'reject' && styles.reject,
+    style={({ pressed }) => [styles.button, tone === 'keep' && styles.keep, tone === 'reject' && styles.reject, tone === 'quiet' && styles.quiet, prominent && styles.prominent,
       active && styles.active, (disabled || pressed) && styles.dim]}>
-    <Text style={[styles.buttonText, tone === 'keep' && styles.darkText]}>{label}</Text>
+    <Text style={[styles.buttonText, tone === 'quiet' && styles.quietText, tone === 'keep' && styles.darkText, prominent && styles.prominentText]}>{label}</Text>
   </Pressable>;
 }
 
@@ -31,6 +31,8 @@ const styles = StyleSheet.create({
   buttonText: { color: '#f2f5ed', fontSize: 14, fontWeight: '600' }, darkText: { color: '#172313' },
   keep: { backgroundColor: '#b8edab', borderColor: '#b8edab' },
   reject: { backgroundColor: '#432d2b', borderColor: '#76504b' },
+  quiet: { backgroundColor: 'transparent', borderColor: 'transparent' }, quietText: { color: colors.muted, fontWeight: '500' },
+  prominent: { minHeight: 56, minWidth: 112 }, prominentText: { fontSize: 16 },
   active: { borderColor: '#b8edab', borderWidth: 2 }, dim: { opacity: 0.4 },
   sheet: { flex: 1, backgroundColor: '#171d19' }, sheetHeader: { padding: 22, gap: 16, flexDirection: 'row', alignItems: 'center', borderBottomWidth: 1, borderColor: '#343d35' },
   sheetTitle: { flex: 1, color: '#f2f5ed', fontSize: 24, fontWeight: '600' }, sheetContent: { padding: 24, gap: 20 },

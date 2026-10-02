@@ -16,7 +16,7 @@ globalThis.__DEV__ = false;
 
 // Execute repository modules unchanged. Only platform bindings and the gesture surface are
 // replaced: commands still cross the real App handler, workspace hook, and review reducer.
-function loadApp(native) {
+function loadApp(native, { dimensions, prefetches, cacheConfigurations, prefetch }) {
   const cache = new Map();
   const host = type => type;
   const FlatList = React.forwardRef((props, ref) => {
@@ -31,14 +31,20 @@ function loadApp(native) {
     ScrollView: host('ScrollView'), Text: host('Text'), View: host('View'),
     Modal: props => props.visible ? React.createElement('Modal', props, props.children) : null,
     StyleSheet: { create: value => value, absoluteFill: { position: 'absolute', inset: 0 }, hairlineWidth: 1 },
-    useWindowDimensions: () => ({ width: 1366, height: 1024, scale: 2, fontScale: 1 }),
+    useWindowDimensions: () => dimensions,
     AppState: { addEventListener: () => ({ remove() {} }) },
   };
+  const Image = props => React.createElement('Image', props);
+  Image.prefetch = (uri, options) => {
+    prefetches.push({ uri, options });
+    return prefetch(uri, options);
+  };
+  Image.configureCache = options => { cacheConfigurations.push(options); };
   const bindings = new Map([
     ['react-native', platform],
     ['react-native-gesture-handler', { GestureHandlerRootView: host('GestureHandlerRootView') }],
     ['react-native-safe-area-context', { SafeAreaProvider: host('SafeAreaProvider'), SafeAreaView: host('SafeAreaView') }],
-    ['expo-image', { Image: host('Image') }],
+    ['expo-image', { Image }],
     ['expo-status-bar', { StatusBar: host('StatusBar') }],
     [resolve(project, 'modules/photo-pruner-native'), { __esModule: true, default: native, PhotoPrunerNativeView: host('PhotoPrunerNativeView') }],
     [resolve(project, 'src/components/SwipePhoto'), { SwipePhoto: host('SwipePhoto') }],
@@ -67,9 +73,12 @@ function loadApp(native) {
   return load(resolve(project, 'App.tsx')).default;
 }
 
-export async function mountApp({ files = ['DSC_0001.JPG', 'DSC_0002.JPG', 'DSC_0003.JPG'], native: nativeOverrides = {} } = {}) {
+export async function mountApp({ files = ['DSC_0001.JPG', 'DSC_0002.JPG', 'DSC_0003.JPG'], native: nativeOverrides = {},
+  dimensions = { width: 1366, height: 1024, scale: 2, fontScale: 1 }, prefetch = async () => true } = {}) {
   const previews = [];
   const saves = [];
+  const prefetches = [];
+  const cacheConfigurations = [];
   const folder = { id: 'test-shoot', revision: 'scan-1', name: 'Test shoot', scanMs: 0,
     files: files.map(name => ({ name, size: 10 })) };
   const native = {
@@ -78,23 +87,26 @@ export async function mountApp({ files = ['DSC_0001.JPG', 'DSC_0002.JPG', 'DSC_0
     refreshFolder: async () => folder,
     loadReview: async () => null,
     saveReview: async (folderID, json) => { saves.push({ folderID, document: JSON.parse(json) }); },
-    previewCandidates: (revision, names) => new Promise(resolvePreview => { previews.push({ revision, names, resolve: resolvePreview }); }),
+    previewCandidates: (revision, names) => new Promise((resolvePreview, rejectPreview) => {
+      previews.push({ revision, names, settled: false,
+        resolve: resolvePreview, reject: rejectPreview });
+    }),
     addListener: () => ({ remove() {} }),
     ...nativeOverrides,
   };
-  const App = loadApp(native);
+  const App = loadApp(native, { dimensions, prefetches, cacheConfigurations, prefetch });
   let renderer;
   await act(async () => { renderer = create(React.createElement(App)); });
   const byID = id => renderer.root.findByProps({ testID: id });
   const readText = node => node.children.map(child => typeof child === 'object' ? readText(child) : String(child)).join('');
   return {
-    previews, saves, native, folder,
+    previews, saves, native, folder, prefetches, cacheConfigurations,
     byID,
     hasID: id => renderer.root.findAllByProps({ testID: id }).length > 0,
     text: id => readText(byID(id)),
     keyboard: () => renderer.root.findByType('PhotoPrunerNativeView'),
     swipe: () => renderer.root.findByType('SwipePhoto'),
-    image: () => renderer.root.findByType('Image'),
+    image: () => byID('photo-preview').findByType('Image'),
     modal: () => renderer.root.findByType('Modal'),
     async keys(...keys) {
       await act(async () => {
@@ -109,9 +121,31 @@ export async function mountApp({ files = ['DSC_0001.JPG', 'DSC_0002.JPG', 'DSC_0
     },
     async resolvePreview(index) {
       assert.ok(previews[index], `Preview request ${index} must exist`);
-      await act(async () => { previews[index].resolve(`file:///test-preview-${index}.jpg`); await tick(); });
+      await act(async () => {
+        previews[index].settled = true;
+        previews[index].resolve(`file:///test-preview-${index}.jpg`);
+        await tick();
+      });
     },
-    async event(callback) { await act(async () => { callback(); }); },
+    async resolvePreviewFor(name) {
+      const index = previews.findIndex(request => !request.settled && request.names.includes(name));
+      assert.ok(index >= 0, `An unresolved preview request for ${name} must exist`);
+      await act(async () => {
+        previews[index].settled = true;
+        previews[index].resolve(`file:///test-preview-${index}.jpg`);
+        await tick();
+      });
+    },
+    async rejectPreviewFor(name, message = 'Decoder failed') {
+      const request = previews.find(candidate => !candidate.settled && candidate.names.includes(name));
+      assert.ok(request, `An unresolved preview request for ${name} must exist`);
+      await act(async () => { request.settled = true; request.reject(new Error(message)); await tick(); });
+    },
+    async event(callback) {
+      let result;
+      await act(async () => { result = await callback(); await tick(); });
+      return result;
+    },
     async unmount() { await act(async () => { renderer.unmount(); await tick(); }); },
   };
 }

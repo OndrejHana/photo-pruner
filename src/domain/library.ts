@@ -36,7 +36,7 @@ export function groupPhotos(files: PhotoFile[]): Photo[] {
   }).sort((a, b) => compare(a.name, b.name));
 }
 
-export type Command = { type: 'move'; delta: number } | { type: 'decision'; decision: Decision } | { type: 'clearDecision' } | { type: 'rate'; stars: number } | { type: 'undo' };
+export type Command = { type: 'move'; delta: number } | { type: 'decision'; decision: Decision } | { type: 'clearDecision' } | { type: 'rate'; stars: number } | { type: 'toggleRating'; stars: number } | { type: 'undo' };
 export function commandForKey(key: string): Command | null {
   if (key === 'ArrowRight' || key === 'ArrowDown') return { type: 'move', delta: 1 };
   if (key === 'ArrowLeft' || key === 'ArrowUp') return { type: 'move', delta: -1 };
@@ -102,11 +102,12 @@ export function applyCommand(state: ReviewState, command: Command, photos: Photo
     if (!entry) return state;
     return { reviews: { ...state.reviews, [entry.id]: entry.previous }, index: entry.selectedIndex, undo: state.undo.slice(0, -1) };
   }
-  if (command.type === 'rate' && !Number.isFinite(command.stars)) return state;
+  if ((command.type === 'rate' || command.type === 'toggleRating') && !Number.isFinite(command.stars)) return state;
   const previous = reviewFor(state.reviews, photo.id);
-  const next = command.type === 'rate' ? { ...previous, stars: Math.max(0, Math.min(5, Math.round(command.stars))) }
+  const next = command.type === 'rate' || command.type === 'toggleRating'
+    ? { ...previous, stars: command.type === 'toggleRating' && previous.stars === command.stars ? 0 : Math.max(0, Math.min(5, Math.round(command.stars))) }
     : { ...previous, decision: command.type === 'clearDecision' ? 'unreviewed' as const : command.decision };
-  if (command.type === 'rate' && next.stars === previous.stars) return state;
+  if ((command.type === 'rate' || command.type === 'toggleRating') && next.stars === previous.stars) return state;
   if (command.type === 'clearDecision' && next.decision === previous.decision) return state;
   // A held key at the end of the folder must not erase useful undo history.
   if (command.type === 'decision' && next.decision === previous.decision && state.index === photos.length - 1) return state;
