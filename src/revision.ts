@@ -1,1 +1,1 @@
-export const UI_REVISION = 'keeper-v1';
+export const UI_REVISION = 'keeper-touch-v3';
